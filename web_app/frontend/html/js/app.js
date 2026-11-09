@@ -3174,7 +3174,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateAcModalUI() {
     const isPowerOn = acState.power === 1;
     const targetDev = findCurrentAcDevice();
-    const limits = getAcTempLimits(targetDev);
+    const cap = getAcCapabilities(targetDev);
+    const limits = { min: cap.temp_min, max: cap.temp_max, brand: cap.brand, brandName: cap.brandName };
 
     if (acState.temp > limits.max) acState.temp = limits.max;
     if (acState.temp < limits.min) acState.temp = limits.min;
@@ -3797,16 +3798,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const d = gwRes.data;
       const prevOnline = isGatewayOnline;
 
-      // Watchdog: Kiểm tra độ tươi của heartbeat (trong vòng 15 giây)
-      let isAlive = !!d.online;
+      // Trạng thái trực tuyến được Backend tính toán chuẩn xác từ MQTT LWT và Watchdog 35s
+      let isAlive = Boolean(d.online);
       if (d.last_seen) {
         const lastSeenMs = new Date(d.last_seen).getTime();
         const ageSec = (Date.now() - lastSeenMs) / 1000;
-        if (ageSec > 15) {
+        // Watchdog dự phòng cấp client: chỉ đánh dấu offline nếu quá 45 giây không có dữ liệu
+        if (ageSec > 45) {
           isAlive = false;
         }
-      } else {
-        isAlive = false;
       }
       isGatewayOnline = isAlive;
 
