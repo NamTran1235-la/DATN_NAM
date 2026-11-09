@@ -6,7 +6,7 @@ from app.database import get_session
 from app.auth import get_current_user
 from app.models import HVACControlRequest, GatewayCommandResponse, ControlAudit
 from app.mqtt_service import latest_gateway_status, publish_command
-from app.hunonic_service import hunonic_service
+from app.hunonic_service import hunonic_service, get_brand_profile
 
 router = APIRouter(prefix="/hvac", tags=["3. Điều khiển Điều Hòa Không Khí (HVAC / Hunonic IR)"])
 
@@ -143,10 +143,16 @@ def control_hvac(
     latest_gateway_status["ac_mode"] = req.mode
     latest_gateway_status["ac_fan"] = req.fan
 
-    # Ghi nhật ký điều khiển
-    mode_names = {0: "Auto", 1: "Cool", 2: "Heat", 3: "Dry", 4: "Fan"}
-    fan_names = {0: "Auto", 1: "Min", 3: "Med", 5: "Max"}
-    action_desc = f"{'BẬT' if req.power == 1 else 'TẮT'} | {req.temp}°C | Mode: {mode_names.get(req.mode, req.mode)} | Fan: {fan_names.get(req.fan, req.fan)}"
+    # Ghi nhật ký điều khiển (tự động ánh xạ tên theo Brand của thiết bị)
+    dev_info = latest_gateway_status.get("ac_devices", {}).get(dev_id, {})
+    dev_brand = dev_info.get("brand", 0)
+    dev_name = dev_info.get("name", "")
+    profile = get_brand_profile(dev_brand, dev_name)
+    mode_map = {m["code"]: m["label"] for m in profile.get("modes", [])}
+    fan_map = {f["code"]: f["label"] for f in profile.get("fans", [])}
+    mode_str = mode_map.get(req.mode, str(req.mode))
+    fan_str = fan_map.get(req.fan, str(req.fan))
+    action_desc = f"{'BẬT' if req.power == 1 else 'TẮT'} | {req.temp}°C | Chế độ: {mode_str} | Gió: {fan_str}"
 
     audit = ControlAudit(
         username=current_user["username"],

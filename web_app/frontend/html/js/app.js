@@ -985,39 +985,121 @@ document.addEventListener("DOMContentLoaded", () => {
     return dev.online !== false;
   }
 
+  // ── BẢNG TẬP LỆNH REMOTE CHUẨN HUNONIC CHO TỪNG THƯƠNG HIỆU (BRAND) ─────
+  const DEFAULT_BRAND_PROFILES = {
+    104: {
+      brand: 104,
+      brandName: "Funiki",
+      temp_min: 17,
+      temp_max: 30,
+      modes: [
+        { code: 1, name: "cool", label: "Làm mát", icon: "fa-snowflake" },
+        { code: 2, name: "heat", label: "Sưởi ấm", icon: "fa-fire" },
+        { code: 3, name: "dry", label: "Hút ẩm", icon: "fa-droplet" },
+        { code: 4, name: "fan", label: "Quạt gió", icon: "fa-fan" },
+        { code: 0, name: "auto", label: "Tự động", icon: "fa-arrows-rotate" }
+      ],
+      fans: [
+        { code: 0, name: "auto", label: "Tự động", icon: "fa-a" },
+        { code: 1, name: "min", label: "Nhỏ" },
+        { code: 3, name: "med", label: "Vừa" },
+        { code: 5, name: "max", label: "Lớn" }
+      ]
+    },
+    102: {
+      brand: 102,
+      brandName: "Casper",
+      temp_min: 16,
+      temp_max: 30,
+      modes: [
+        { code: 4, name: "cool", label: "Làm mát", icon: "fa-snowflake" },
+        { code: 12, name: "dry", label: "Hút ẩm", icon: "fa-droplet" },
+        { code: 2, name: "fan", label: "Quạt gió", icon: "fa-fan" },
+        { code: 0, name: "sun", label: "Sưởi ấm", icon: "fa-fire" }
+      ],
+      fans: [
+        { code: 6, name: "auto", label: "Tự động", icon: "fa-a" },
+        { code: 1, name: "min", label: "Nhỏ" },
+        { code: 5, name: "max", label: "Lớn" }
+      ]
+    },
+    16: {
+      brand: 16,
+      brandName: "Casper - Electra",
+      temp_min: 16,
+      temp_max: 30,
+      modes: [
+        { code: 0, name: "auto", label: "Tự động", icon: "fa-arrows-rotate" },
+        { code: 1, name: "cool", label: "Làm mát", icon: "fa-snowflake" },
+        { code: 2, name: "dry", label: "Hút ẩm", icon: "fa-droplet" },
+        { code: 4, name: "heat", label: "Sưởi ấm", icon: "fa-fire" },
+        { code: 6, name: "fan", label: "Quạt gió", icon: "fa-fan" }
+      ],
+      fans: [
+        { code: 5, name: "auto", label: "Tự động", icon: "fa-a" },
+        { code: 3, name: "min", label: "Nhỏ" },
+        { code: 2, name: "med", label: "Vừa" },
+        { code: 1, name: "max", label: "Lớn" }
+      ]
+    },
+    117: {
+      brand: 117,
+      brandName: "Mirage",
+      temp_min: 16,
+      temp_max: 32,
+      modes: [
+        { code: 2, name: "cool", label: "Làm mát", icon: "fa-snowflake" },
+        { code: 3, name: "dry", label: "Hút ẩm", icon: "fa-droplet" },
+        { code: 5, name: "fan", label: "Quạt gió", icon: "fa-fan" },
+        { code: 1, name: "heat", label: "Sưởi ấm", icon: "fa-fire" }
+      ],
+      fans: [
+        { code: 0, name: "auto", label: "Tự động", icon: "fa-a" },
+        { code: 3, name: "min", label: "Nhỏ" },
+        { code: 2, name: "med", label: "Vừa" },
+        { code: 1, name: "max", label: "Lớn" }
+      ]
+    }
+  };
+
+  function getAcCapabilities(dev) {
+    if (!dev) return DEFAULT_BRAND_PROFILES[104];
+    // 1. Nếu thiết bị đã có mảng modes và fans do server trả về
+    if (dev.modes && Array.isArray(dev.modes) && dev.modes.length > 0) {
+      return {
+        brand: Number(dev.brand || 104),
+        brandName: dev.brand_name || dev.name || "Điều hòa",
+        temp_min: Number(dev.temp_min !== undefined ? dev.temp_min : 16),
+        temp_max: Number(dev.temp_max !== undefined ? dev.temp_max : 30),
+        modes: dev.modes,
+        fans: (dev.fans && Array.isArray(dev.fans) && dev.fans.length > 0) ? dev.fans : DEFAULT_BRAND_PROFILES[104].fans
+      };
+    }
+    // 2. Tra cứu theo brand ID
+    const b = Number(dev.brand || (acState && acState.brand) || 0);
+    if (DEFAULT_BRAND_PROFILES[b]) {
+      return DEFAULT_BRAND_PROFILES[b];
+    }
+    // 3. Fallback theo tên thiết bị
+    const name = (dev.name || "").toLowerCase();
+    if (name.includes("electra")) return DEFAULT_BRAND_PROFILES[16];
+    if (name.includes("casper")) return DEFAULT_BRAND_PROFILES[102];
+    if (name.includes("mirage") || name.includes("aux")) return DEFAULT_BRAND_PROFILES[117];
+    return DEFAULT_BRAND_PROFILES[104];
+  }
+
   // ── HÀM LẤY GIỚI HẠN NHIỆT ĐỘ THEO TỪNG THƯƠNG HIỆU ĐIỀU HÒA (BRAND) ─────
   function getAcTempLimits(dev) {
-    let brand = null;
-    if (dev) {
-      if (dev.brand !== undefined && dev.brand !== null) brand = Number(dev.brand);
-      else if (dev.meta && dev.meta.brand !== undefined) brand = Number(dev.meta.brand);
-    }
-    if (!brand && acState && acState.brand) {
-      brand = Number(acState.brand);
-    }
-
-    const devName = (dev && dev.name) ? dev.name.toLowerCase() : "";
-    let maxTemp = 30;
-    let brandName = (dev && dev.name) ? dev.name : "Điều hòa";
-
-    // Brand 117 (Mirage, AUX...) hoặc các model đời mới hỗ trợ dải nhiệt độ lên tới 32°C
-    // Hoặc nếu nhiệt độ hiện tại báo về > 30°C thì tự động mở rộng dải lên 32°C
-    if (brand === 117 || devName.includes("mirage") || devName.includes("aux") || 
-        (dev && dev.temp && dev.temp > 30) || (acState && acState.temp && acState.temp > 30)) {
-      maxTemp = 32;
-      if (brand === 117 || devName.includes("mirage")) brandName = "Mirage";
-    } else if (brand === 104 || devName.includes("funiki")) {
-      brandName = "Funiki";
-    }
-
-    return { min: 16, max: maxTemp, brand: brand || 0, brandName: brandName };
+    const cap = getAcCapabilities(dev);
+    return { min: cap.temp_min, max: cap.temp_max, brand: cap.brand, brandName: cap.brandName };
   }
 
   // ── CẬP NHẬT GIAO DIỆN ĐIỀU HÒA TRONG DRAWER ──────────────────────────────
   function updateDrawerAcUI(dev) {
     if (!dev) return;
     const online = isDeviceOnline(dev);
-    const limits = getAcTempLimits(dev);
+    const cap = getAcCapabilities(dev);
+    const limits = { min: cap.temp_min, max: cap.temp_max, brand: cap.brand, brandName: cap.brandName };
 
     // Kẹp nhiệt độ trong dải cho phép của thương hiệu điều hòa
     let curTemp = dev.temp || 25;
@@ -1027,10 +1109,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Nếu offline -> trạng thái hoạt động thực tế bắt buộc phải là Tắt (0)
     const isPowerOn = online && (dev.state === 1 || dev.power === 1);
-    const curMode = dev.mode !== undefined ? dev.mode : 1;
-    const curFan = dev.fan !== undefined ? dev.fan : 0;
+    const curMode = dev.mode !== undefined ? dev.mode : (cap.modes[0] ? cap.modes[0].code : 1);
+    const curFan = dev.fan !== undefined ? dev.fan : (cap.fans[0] ? cap.fans[0].code : 0);
 
-    const modeLabels = {0: "Tự động", 1: "Làm mát", 2: "Sưởi ấm", 3: "Hút ẩm", 4: "Quạt gió"};
+    const activeModeObj = cap.modes.find(m => m.code === curMode);
+    const activeModeLabel = activeModeObj ? activeModeObj.label : "Làm mát";
 
     if (drawerTempVal) drawerTempVal.innerText = curTemp;
     if (drawerAcScreenNum) drawerAcScreenNum.innerText = curTemp;
@@ -1082,7 +1165,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!online) {
         drawerAcLiveText.innerHTML = `<span class="pulse-dot-red"></span> Ngoại tuyến (Mất kết nối)`;
       } else if (isPowerOn) {
-        drawerAcLiveText.innerHTML = `<span class="pulse-dot-cyan"></span> Đang ${modeLabels[curMode] || 'làm mát'} ${curTemp}°C`;
+        drawerAcLiveText.innerHTML = `<span class="pulse-dot-cyan"></span> Đang ${activeModeLabel.toLowerCase()} ${curTemp}°C`;
       } else {
         drawerAcLiveText.innerText = "Đang tắt (Chế độ chờ)";
       }
@@ -1099,17 +1182,26 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Cập nhật pills chế độ (Mode)
-    drawerModePills.forEach(pill => {
-      const m = parseInt(pill.getAttribute("data-mode"));
-      pill.classList.toggle("active", m === curMode);
-    });
+    // Render động pills chế độ (Mode) theo server/tập lệnh của thiết bị
+    const drawerModeContainer = document.getElementById("drawer-mode-pills");
+    if (drawerModeContainer) {
+      drawerModeContainer.innerHTML = cap.modes.map(m => `
+        <div class="drawer-pill-opt ${curMode === m.code ? 'active' : ''}" data-mode="${m.code}">
+          <i class="fa-solid ${m.icon || 'fa-snowflake'}"></i> ${escapeHtml(m.label)}
+        </div>
+      `).join("");
+    }
 
-    // Cập nhật pills tốc độ quạt (Fan)
-    drawerFanPills.forEach(pill => {
-      const f = parseInt(pill.getAttribute("data-fan"));
-      pill.classList.toggle("active", f === curFan);
-    });
+    // Render động pills tốc độ quạt (Fan) theo server/tập lệnh của thiết bị
+    const drawerFanContainer = document.getElementById("drawer-fan-pills");
+    if (drawerFanContainer) {
+      drawerFanContainer.className = `drawer-pills-grid fan-grid fan-count-${cap.fans.length}`;
+      drawerFanContainer.innerHTML = cap.fans.map(f => `
+        <div class="drawer-pill-opt ${curFan === f.code ? 'active' : ''}" data-fan="${f.code}">
+          ${f.icon ? `<i class="fa-solid ${f.icon}"></i> ` : ''}${escapeHtml(f.label)}
+        </div>
+      `).join("");
+    }
 
     // Cập nhật chips nhiệt độ nhanh
     drawerTempPresets.forEach(chip => {
@@ -1384,8 +1476,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const executeHvacApi = async (p, name) => {
       const res = await callApi("/api/hvac/control", "POST", p);
       if (res && res.success) {
-        const modeNames = {0: "Tự động", 1: "Làm mát", 2: "Sưởi ấm", 3: "Hút ẩm", 4: "Quạt gió"};
-        showToast(`[${name}] ${p.power === 1 ? 'BẬT' : 'TẮT'} • ${p.temp}°C • ${modeNames[p.mode] || ''}`, "success");
+        const cap = getAcCapabilities(targetDev);
+        const mObj = cap.modes.find(m => m.code === p.mode);
+        const mLabel = mObj ? mObj.label : (p.mode !== undefined ? `Chế độ ${p.mode}` : '');
+        showToast(`[${name}] ${p.power === 1 ? 'BẬT' : 'TẮT'} • ${p.temp}°C • ${mLabel}`, "success");
       } else {
         let errMsg = "Lỗi gửi lệnh điều khiển điều hòa!";
         if (res && res.detail) {
@@ -1552,8 +1646,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  drawerModePills.forEach(pill => {
-    pill.addEventListener("click", () => {
+  const drawerModeGroup = document.getElementById("drawer-mode-pills");
+  if (drawerModeGroup) {
+    drawerModeGroup.addEventListener("click", (e) => {
+      const pill = e.target.closest(".drawer-pill-opt");
+      if (!pill) return;
       const { hubDev, targetDev } = resolveDrawerTargetDev();
       if (!targetDev) return;
       if (!isDeviceOnline(hubDev || targetDev)) {
@@ -1563,10 +1660,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const m = parseInt(pill.getAttribute("data-mode"));
       sendDrawerAcCommand(targetDev, { mode: m });
     });
-  });
+  }
 
-  drawerFanPills.forEach(pill => {
-    pill.addEventListener("click", () => {
+  const drawerFanGroup = document.getElementById("drawer-fan-pills");
+  if (drawerFanGroup) {
+    drawerFanGroup.addEventListener("click", (e) => {
+      const pill = e.target.closest(".drawer-pill-opt");
+      if (!pill) return;
       const { hubDev, targetDev } = resolveDrawerTargetDev();
       if (!targetDev) return;
       if (!isDeviceOnline(hubDev || targetDev)) {
@@ -1576,7 +1676,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const f = parseInt(pill.getAttribute("data-fan"));
       sendDrawerAcCommand(targetDev, { fan: f });
     });
-  });
+  }
 
   // ── MỞ DRAWER BÊN TAY PHẢI CHO TRẠM GATEWAY ──────────────────────────────────
   function openGatewayDrawer(openAdd = false) {
@@ -2471,7 +2571,10 @@ document.addEventListener("DOMContentLoaded", () => {
       children.forEach((child) => {
         const isChildOn = isHubOnline && (child.power === 1 || child.state === 1);
         const temp = child.temp || 25;
-        const statusText = !isHubOnline ? "Chờ kết nối lại" : (isChildOn ? `Đang làm mát ${temp}°C` : "Đang tắt");
+        const cap = getAcCapabilities(child);
+        const activeModeObj = cap.modes.find(m => m.code === child.mode);
+        const modeLabel = activeModeObj ? activeModeObj.label : "Làm mát";
+        const statusText = !isHubOnline ? "Chờ kết nối lại" : (isChildOn ? `Đang ${modeLabel.toLowerCase()} ${temp}°C` : "Đang tắt");
         const subClass = isChildOn ? "on" : "";
 
         html += `
@@ -3095,17 +3198,26 @@ document.addEventListener("DOMContentLoaded", () => {
       btnTempMinus.style.opacity = acState.temp <= limits.min ? "0.4" : "1";
     }
 
-    modePills.forEach(pill => {
-      const m = parseInt(pill.getAttribute("data-mode"));
-      if (m === acState.mode) pill.classList.add("active");
-      else pill.classList.remove("active");
-    });
+    const curMode = acState.mode !== undefined ? acState.mode : (cap.modes[0] ? cap.modes[0].code : 1);
+    const curFan = acState.fan !== undefined ? acState.fan : (cap.fans[0] ? cap.fans[0].code : 0);
 
-    fanPills.forEach(pill => {
-      const f = parseInt(pill.getAttribute("data-fan"));
-      if (f === acState.fan) pill.classList.add("active");
-      else pill.classList.remove("active");
-    });
+    const modalModeContainer = document.getElementById("mode-pills");
+    if (modalModeContainer) {
+      modalModeContainer.innerHTML = cap.modes.map(m => `
+        <div class="pill-opt ${curMode === m.code ? 'active' : ''}" data-mode="${m.code}">
+          <i class="fa-solid ${m.icon || 'fa-snowflake'}"></i> ${escapeHtml(m.label)}
+        </div>
+      `).join("");
+    }
+
+    const modalFanContainer = document.getElementById("fan-pills");
+    if (modalFanContainer) {
+      modalFanContainer.innerHTML = cap.fans.map(f => `
+        <div class="pill-opt ${curFan === f.code ? 'active' : ''}" data-fan="${f.code}">
+          ${f.icon ? `<i class="fa-solid ${f.icon}"></i> ` : ''}${escapeHtml(f.label)}
+        </div>
+      `).join("");
+    }
   }
 
   // ── Xử lý các nút điều khiển trong Modal AC ──────────────────────────────
@@ -3140,19 +3252,25 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  modePills.forEach(pill => {
-    pill.addEventListener("click", () => {
+  const modalModeGroup = document.getElementById("mode-pills");
+  if (modalModeGroup) {
+    modalModeGroup.addEventListener("click", (e) => {
+      const pill = e.target.closest(".pill-opt");
+      if (!pill) return;
       const m = parseInt(pill.getAttribute("data-mode"));
       sendAcControlCommand(null, { mode: m }, false);
     });
-  });
+  }
 
-  fanPills.forEach(pill => {
-    pill.addEventListener("click", () => {
+  const modalFanGroup = document.getElementById("fan-pills");
+  if (modalFanGroup) {
+    modalFanGroup.addEventListener("click", (e) => {
+      const pill = e.target.closest(".pill-opt");
+      if (!pill) return;
       const f = parseInt(pill.getAttribute("data-fan"));
       sendAcControlCommand(null, { fan: f }, false);
     });
-  });
+  }
 
   if (btnRebootGate) {
     btnRebootGate.addEventListener("click", async () => {
@@ -3753,16 +3871,23 @@ document.addEventListener("DOMContentLoaded", () => {
           } else if (d.ac_devices && typeof d.ac_devices === "object") {
             const updatedChildren = [];
             for (const [did, dinfo] of Object.entries(d.ac_devices)) {
+              const existingChild = (liveHub.children || []).find(c => String(c.id) === String(did));
+              const cap = getAcCapabilities(dinfo);
               updatedChildren.push({
                 id: String(did),
-                name: dinfo.name || `Điều hòa ${did}`,
+                name: dinfo.name || (existingChild && existingChild.name) || `Điều hòa ${did}`,
                 type: "ac",
-                brand: dinfo.brand || 0,
-                power: dinfo.power || 0,
-                state: dinfo.power || 0,
-                temp: dinfo.temp || 25,
-                mode: dinfo.mode || 1,
-                fan: dinfo.fan || 0,
+                brand: dinfo.brand || (existingChild && existingChild.brand) || cap.brand || 0,
+                brand_name: dinfo.brand_name || (existingChild && existingChild.brand_name) || cap.brandName,
+                power: dinfo.power !== undefined ? dinfo.power : (existingChild ? existingChild.power : 0),
+                state: dinfo.power !== undefined ? dinfo.power : (existingChild ? existingChild.state : 0),
+                temp: dinfo.temp || (existingChild && existingChild.temp) || 25,
+                mode: dinfo.mode !== undefined ? dinfo.mode : (existingChild && existingChild.mode !== undefined ? existingChild.mode : (cap.modes[0] ? cap.modes[0].code : 1)),
+                fan: dinfo.fan !== undefined ? dinfo.fan : (existingChild && existingChild.fan !== undefined ? existingChild.fan : (cap.fans[0] ? cap.fans[0].code : 0)),
+                temp_min: dinfo.temp_min || (existingChild && existingChild.temp_min) || cap.temp_min,
+                temp_max: dinfo.temp_max || (existingChild && existingChild.temp_max) || cap.temp_max,
+                modes: dinfo.modes || (existingChild && existingChild.modes) || cap.modes,
+                fans: dinfo.fans || (existingChild && existingChild.fans) || cap.fans,
                 online: Boolean(dinfo.online && d.ac_online)
               });
             }
@@ -3804,16 +3929,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (!freshChild && d.ac_devices && targetId && d.ac_devices[targetId]) {
           const dinfo = d.ac_devices[targetId];
+          const cap = getAcCapabilities(dinfo);
           freshChild = {
             id: String(targetId),
             name: dinfo.name || `Điều hòa ${targetId}`,
             type: "ac",
-            brand: dinfo.brand || 0,
+            brand: dinfo.brand || cap.brand || 0,
+            brand_name: dinfo.brand_name || cap.brandName,
             power: dinfo.power || 0,
             state: dinfo.power || 0,
             temp: dinfo.temp || 25,
-            mode: dinfo.mode || 1,
-            fan: dinfo.fan || 0,
+            mode: dinfo.mode || (cap.modes[0] ? cap.modes[0].code : 1),
+            fan: dinfo.fan || (cap.fans[0] ? cap.fans[0].code : 0),
+            temp_min: dinfo.temp_min || cap.temp_min,
+            temp_max: dinfo.temp_max || cap.temp_max,
+            modes: dinfo.modes || cap.modes,
+            fans: dinfo.fans || cap.fans,
             online: Boolean(dinfo.online && d.ac_online)
           };
         }
