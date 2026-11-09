@@ -1,0 +1,27 @@
+idf_component_register(
+    SRCS 
+        "led/led.c"
+        "button/button.c"
+        "SHT30/SHT30.c"
+        "bmp280/bmp280.c"
+        "presence_sensor/presence_sensor.c"
+        "presence_sensor/ld2410_parser.c"
+        "esp_now_node/esp_now_node.c"
+    INCLUDE_DIRS 
+        "led"
+        "button"
+        "SHT30"
+        "bmp280"
+        "presence_sensor"
+        "esp_now_node"
+        "."
+    REQUIRES 
+        driver
+        esp_timer
+        esp_wifi
+        esp_event
+        middle
+        third_party
+)
+
+
