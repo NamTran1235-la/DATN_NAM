@@ -62,7 +62,7 @@ void app_main(void) {
              BMP280_I2C_SCL_PIN);
     ESP_LOGI(TAG, "   LD2410B Radar  : RX=GPIO%d, TX=GPIO%d", PRESENCE_UART_RX_PIN,
              PRESENCE_UART_TX_PIN);
-    ESP_LOGI(TAG, "   Status LED     : GPIO%d (Sang 1.5s khi mat ket noi)", STATUS_LED_PIN);
+    ESP_LOGI(TAG, "   Status LED     : GPIO%d (Sang lien tuc khi ket noi Gateway)", STATUS_LED_PIN);
     ESP_LOGI(TAG, "=========================================================");
 
     ESP_ERROR_CHECK(presence_controller_init());

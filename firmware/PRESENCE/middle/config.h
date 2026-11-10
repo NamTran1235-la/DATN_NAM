@@ -51,7 +51,7 @@
 #endif
 
 #ifndef LED_ACTIVE_LEVEL
-#define LED_ACTIVE_LEVEL          1
+#define LED_ACTIVE_LEVEL          0
 #endif
 
 /* Bỏ nút bấm Button */
