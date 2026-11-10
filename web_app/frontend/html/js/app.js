@@ -2450,8 +2450,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const homeDash = document.getElementById("view-home-dashboard");
     const subView = document.getElementById("view-device-hub");
     const otaView = document.getElementById("view-firmware-update");
+    const autoView = document.getElementById("view-automations");
     if (homeDash) homeDash.style.display = "none";
     if (otaView) otaView.style.display = "none";
+    if (autoView) autoView.style.display = "none";
     if (subView) subView.style.display = "block";
     updateSidebarActive("nav-home");
 
@@ -2525,8 +2527,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const homeDash = document.getElementById("view-home-dashboard");
     const subView = document.getElementById("view-device-hub");
     const otaView = document.getElementById("view-firmware-update");
+    const autoView = document.getElementById("view-automations");
     if (subView) subView.style.display = "none";
     if (otaView) otaView.style.display = "none";
+    if (autoView) autoView.style.display = "none";
     if (homeDash) homeDash.style.display = "block";
     updateSidebarActive("nav-home");
     renderDevices();
@@ -3282,63 +3286,284 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ── Xử lý các Ngữ cảnh thông minh (Quick Scenes) ───────────────────────────
-  const sceneHome = document.getElementById("scene-home");
-  const sceneSleep = document.getElementById("scene-sleep");
-  const sceneCoolFast = document.getElementById("scene-cool-fast");
-  const scenePowerSave = document.getElementById("scene-power-save");
+  // ── XỬ LÝ NGỮ CẢNH THÔNG MINH ĐỘNG (DYNAMIC SMART SCENES) ─────────────────
+  const DEFAULT_SCENES = [
+    {
+      id: "scene_home",
+      name: "Về nhà (25°C Cool)",
+      sub: "AC 25°C &bull; Cool &bull; R1 Bật",
+      icon: "fa-house-user",
+      color: "#00b06f",
+      isDefault: true,
+      actions: { ac_power: 1, ac_temp: 25, ac_mode: 1, ac_fan: 0, relay1: 1 }
+    },
+    {
+      id: "scene_sleep",
+      name: "Đi ngủ (27°C)",
+      sub: "AC 27°C &bull; Quạt êm",
+      icon: "fa-moon",
+      color: "#0284c7",
+      isDefault: true,
+      actions: { ac_power: 1, ac_temp: 27, ac_mode: 1, ac_fan: 1 }
+    },
+    {
+      id: "scene_cool_fast",
+      name: "Làm mát nhanh (20°C)",
+      sub: "AC 20°C &bull; Quạt Max",
+      icon: "fa-snowflake",
+      color: "#06b6d4",
+      isDefault: true,
+      actions: { ac_power: 1, ac_temp: 20, ac_mode: 1, ac_fan: 5 }
+    },
+    {
+      id: "scene_power_save",
+      name: "Tiết kiệm điện",
+      sub: "Tắt toàn bộ thiết bị",
+      icon: "fa-leaf",
+      color: "#10b981",
+      isDefault: true,
+      actions: { ac_power: 0, relay1: 0, relay2: 0 }
+    }
+  ];
 
-  if (sceneHome) {
-    sceneHome.addEventListener("click", async () => {
-      if (acDebounceTimer) { clearTimeout(acDebounceTimer); acDebounceTimer = null; }
-      showToast("Kích hoạt ngữ cảnh: VỀ NHÀ", "info");
-      acState.power = 1;
-      acState.temp = 25;
-      acState.mode = 1;
-      updateAcModalUI();
-      renderDevices();
-      await callApi("/api/hvac/control", "POST", { power: 1, temp: 25, mode: 1, fan: 0 });
-      showToast("Ngữ cảnh Về Nhà đã sẵn sàng (AC 25°C Cool)", "success");
+  function getStoredScenes() {
+    try {
+      const stored = localStorage.getItem("gate_user_scenes");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_SCENES;
+  }
+
+  function saveStoredScenes(scenes) {
+    localStorage.setItem("gate_user_scenes", JSON.stringify(scenes));
+  }
+
+  function renderFavoriteScenes() {
+    const container = document.getElementById("scenes-chips-container");
+    if (!container) return;
+
+    const scenes = getStoredScenes();
+    let html = "";
+
+    scenes.forEach(sc => {
+      const isCustom = !sc.isDefault;
+      html += `
+        <div class="scene-chip" data-scene-id="${escapeHtml(sc.id)}" title="Bấm để kích hoạt ngữ cảnh [${escapeHtml(sc.name)}]">
+          <i class="fa-solid ${escapeHtml(sc.icon || 'fa-wand-magic-sparkles')} chip-icon" style="color: ${escapeHtml(sc.color || '#00b06f')};"></i>
+          <div class="scene-chip-text">
+            <span class="scene-chip-name">${escapeHtml(sc.name)}</span>
+            <span class="scene-chip-sub">${sc.sub || 'Ngữ cảnh tùy chỉnh'}</span>
+          </div>
+          ${isCustom ? `
+            <button type="button" class="btn-scene-del" data-id="${escapeHtml(sc.id)}" title="Xóa ngữ cảnh này">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          ` : ''}
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+
+    container.querySelectorAll(".scene-chip").forEach(chip => {
+      chip.addEventListener("click", async (e) => {
+        if (e.target.closest(".btn-scene-del")) return;
+        const sId = chip.getAttribute("data-scene-id");
+        const scene = getStoredScenes().find(s => s.id === sId);
+        if (scene) await executeScene(scene, chip);
+      });
+    });
+
+    container.querySelectorAll(".btn-scene-del").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const sId = btn.getAttribute("data-id");
+        if (confirm("Bạn có chắc chắn muốn xóa ngữ cảnh này?")) {
+          const filtered = getStoredScenes().filter(s => s.id !== sId);
+          saveStoredScenes(filtered);
+          renderFavoriteScenes();
+          showToast("Đã xóa ngữ cảnh!", "info");
+        }
+      });
     });
   }
 
-  if (sceneSleep) {
-    sceneSleep.addEventListener("click", async () => {
-      if (acDebounceTimer) { clearTimeout(acDebounceTimer); acDebounceTimer = null; }
-      showToast("Kích hoạt ngữ cảnh: ĐI NGỦ", "info");
-      acState.power = 1;
-      acState.temp = 27;
-      acState.fan = 1;
+  async function executeScene(sc, chipEl = null) {
+    if (chipEl) {
+      chipEl.style.transform = "scale(0.95)";
+      setTimeout(() => { chipEl.style.transform = ""; }, 200);
+    }
+    showToast(`Đang kích hoạt: ${sc.name}...`, "info");
+
+    const acts = sc.actions || {};
+
+    if (acts.ac_power !== undefined) {
+      acState.power = acts.ac_power;
+      if (acts.ac_temp > 0) acState.temp = acts.ac_temp;
+      if (acts.ac_mode !== undefined) acState.mode = acts.ac_mode;
+      if (acts.ac_fan !== undefined) acState.fan = acts.ac_fan;
       updateAcModalUI();
       renderDevices();
-      await callApi("/api/hvac/control", "POST", { power: 1, temp: 27, mode: 1, fan: 1 });
-      showToast("Ngữ cảnh Đi Ngủ đã kích hoạt (AC 27°C Quạt êm)", "success");
+      await callApi("/api/hvac/control", "POST", {
+        power: acState.power,
+        temp: acState.temp,
+        mode: acState.mode,
+        fan: acState.fan
+      });
+    }
+
+    if (acts.relay1 !== undefined && acts.relay1 >= 0) {
+      relayStates[1] = acts.relay1;
+      await callApi("/api/gateway/relay/1", "POST", { state: acts.relay1 });
+    }
+
+    if (acts.relay2 !== undefined && acts.relay2 >= 0) {
+      relayStates[2] = acts.relay2;
+      await callApi("/api/gateway/relay/2", "POST", { state: acts.relay2 });
+    }
+
+    renderDevices();
+    showToast(`Ngữ cảnh [${sc.name}] đã sẵn sàng!`, "success");
+  }
+
+  // ── MODAL THIẾT LẬP NGỮ CẢNH (SCENE BUILDER) ──────────────────────────────
+  const modalSceneBuilder = document.getElementById("modal-scene-builder");
+  const btnAddScene = document.getElementById("btn-add-scene");
+  const btnCloseSceneModal = document.getElementById("btn-close-scene-modal");
+  const btnCancelSceneModal = document.getElementById("btn-cancel-scene-modal");
+  const btnSaveScene = document.getElementById("btn-save-scene");
+  const inputSceneName = document.getElementById("input-scene-name");
+  const sceneIconPicker = document.getElementById("scene-icon-picker");
+  const sceneColorPicker = document.getElementById("scene-color-picker");
+  const sceneAcEnable = document.getElementById("scene-ac-enable");
+  const sceneAcOptions = document.getElementById("scene-ac-options");
+  const sceneAcPower = document.getElementById("scene-ac-power");
+  const sceneAcMode = document.getElementById("scene-ac-mode");
+  const sceneTempDisplay = document.getElementById("scene-temp-display");
+  const btnSceneTempMinus = document.getElementById("btn-scene-temp-minus");
+  const btnSceneTempPlus = document.getElementById("btn-scene-temp-plus");
+  const sceneRelay1Act = document.getElementById("scene-relay1-act");
+  const sceneRelay2Act = document.getElementById("scene-relay2-act");
+
+  let newSceneTemp = 25;
+  let selectedSceneIcon = "fa-couch";
+  let selectedSceneColor = "#00b06f";
+
+  if (sceneAcEnable) {
+    sceneAcEnable.addEventListener("change", () => {
+      if (sceneAcOptions) sceneAcOptions.style.display = sceneAcEnable.checked ? "block" : "none";
     });
   }
 
-  if (sceneCoolFast) {
-    sceneCoolFast.addEventListener("click", async () => {
-      if (acDebounceTimer) { clearTimeout(acDebounceTimer); acDebounceTimer = null; }
-      showToast("Kích hoạt ngữ cảnh: LÀM MÁT NHANH", "info");
-      acState.power = 1;
-      acState.temp = 20;
-      acState.fan = 5;
-      updateAcModalUI();
-      renderDevices();
-      await callApi("/api/hvac/control", "POST", { power: 1, temp: 20, mode: 1, fan: 5 });
-      showToast("Đang làm mát cấp tốc (AC 20°C & Quạt Tối Đa)", "success");
+  if (btnSceneTempMinus) {
+    btnSceneTempMinus.addEventListener("click", () => {
+      if (newSceneTemp > 16) {
+        newSceneTemp--;
+        if (sceneTempDisplay) sceneTempDisplay.innerText = `${newSceneTemp}°C`;
+      }
+    });
+  }
+  if (btnSceneTempPlus) {
+    btnSceneTempPlus.addEventListener("click", () => {
+      if (newSceneTemp < 30) {
+        newSceneTemp++;
+        if (sceneTempDisplay) sceneTempDisplay.innerText = `${newSceneTemp}°C`;
+      }
     });
   }
 
-  if (scenePowerSave) {
-    scenePowerSave.addEventListener("click", async () => {
-      if (acDebounceTimer) { clearTimeout(acDebounceTimer); acDebounceTimer = null; }
-      showToast("Kích hoạt ngữ cảnh: TIẾT KIỆM ĐIỆN", "info");
-      acState.power = 0;
-      updateAcModalUI();
-      renderDevices();
-      await callApi("/api/hvac/control", "POST", { power: 0, temp: acState.temp, mode: acState.mode, fan: acState.fan });
-      showToast("Đã tắt toàn bộ thiết bị để tiết kiệm điện", "success");
+  if (sceneIconPicker) {
+    sceneIconPicker.querySelectorAll(".icon-picker-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        sceneIconPicker.querySelectorAll(".icon-picker-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedSceneIcon = btn.getAttribute("data-icon") || "fa-couch";
+      });
+    });
+  }
+
+  if (sceneColorPicker) {
+    sceneColorPicker.querySelectorAll(".color-dot").forEach(dot => {
+      dot.addEventListener("click", () => {
+        sceneColorPicker.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+        dot.classList.add("active");
+        selectedSceneColor = dot.getAttribute("data-color") || "#00b06f";
+      });
+    });
+  }
+
+  function openSceneBuilderModal() {
+    if (inputSceneName) inputSceneName.value = "";
+    newSceneTemp = 25;
+    if (sceneTempDisplay) sceneTempDisplay.innerText = "25°C";
+    if (sceneAcEnable) sceneAcEnable.checked = true;
+    if (sceneAcOptions) sceneAcOptions.style.display = "block";
+    if (modalSceneBuilder) modalSceneBuilder.classList.remove("hidden");
+  }
+
+  function closeSceneBuilderModal() {
+    if (modalSceneBuilder) modalSceneBuilder.classList.add("hidden");
+  }
+
+  if (btnAddScene) btnAddScene.addEventListener("click", openSceneBuilderModal);
+  if (btnCloseSceneModal) btnCloseSceneModal.addEventListener("click", closeSceneBuilderModal);
+  if (btnCancelSceneModal) btnCancelSceneModal.addEventListener("click", closeSceneBuilderModal);
+
+  if (btnSaveScene) {
+    btnSaveScene.addEventListener("click", () => {
+      const name = inputSceneName ? inputSceneName.value.trim() : "";
+      if (!name) {
+        showToast("Vui lòng nhập tên ngữ cảnh!", "error");
+        return;
+      }
+
+      const actions = {};
+      let subParts = [];
+
+      if (sceneAcEnable && sceneAcEnable.checked) {
+        const pwr = Number(sceneAcPower ? sceneAcPower.value : 1);
+        actions.ac_power = pwr;
+        if (pwr === 1) {
+          actions.ac_temp = newSceneTemp;
+          actions.ac_mode = Number(sceneAcMode ? sceneAcMode.value : 1);
+          actions.ac_fan = 0;
+          subParts.push(`AC ${newSceneTemp}°C`);
+        } else {
+          subParts.push("Tắt AC");
+        }
+      }
+
+      const r1 = Number(sceneRelay1Act ? sceneRelay1Act.value : -1);
+      if (r1 !== -1) {
+        actions.relay1 = r1;
+        subParts.push(r1 === 1 ? "R1 Bật" : "R1 Tắt");
+      }
+
+      const r2 = Number(sceneRelay2Act ? sceneRelay2Act.value : -1);
+      if (r2 !== -1) {
+        actions.relay2 = r2;
+        subParts.push(r2 === 1 ? "R2 Bật" : "R2 Tắt");
+      }
+
+      const newScene = {
+        id: "scene_custom_" + Date.now(),
+        name,
+        sub: subParts.length > 0 ? subParts.join(" &bull; ") : "Tùy chỉnh",
+        icon: selectedSceneIcon,
+        color: selectedSceneColor,
+        isDefault: false,
+        actions
+      };
+
+      const scenes = getStoredScenes();
+      scenes.push(newScene);
+      saveStoredScenes(scenes);
+      renderFavoriteScenes();
+      closeSceneBuilderModal();
+      showToast(`Đã tạo thành công ngữ cảnh [${name}]!`, "success");
     });
   }
 
@@ -4144,13 +4369,400 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Mở màn hình cập nhật Firmware OTA
-  function openFirmwareView() {
+  // ==============================================================================
+  // TỰ ĐỘNG HÓA THÔNG MINH (SMART AUTOMATION ENGINE)
+  // ==============================================================================
+  const viewAutomations = document.getElementById("view-automations");
+  const navAutomationsBtn = document.getElementById("nav-automations");
+  const btnAutoBack = document.getElementById("btn-auto-back");
+  const btnOpenCreateAuto = document.getElementById("btn-open-create-auto");
+
+  const DEFAULT_AUTOMATIONS = [
+    {
+      id: "auto_eco_presence",
+      name: "Tự ngắt khi vắng người (Eco Presence)",
+      badge: "Radar mmWave",
+      badgeColor: "#059669",
+      badgeBg: "#ecfdf5",
+      icon: "fa-person-walking-arrow-right",
+      iconColor: "#059669",
+      iconBg: "#ecfdf5",
+      enabled: true,
+      triggerText: "Radar LD2410B phát hiện phòng TRỐNG liên tục ≥ 5 phút",
+      actionText: "Tự tắt toàn bộ Điều hòa & Ngắt Relay 1 (Đèn chính)",
+      actions: { ac_power: 0, relay1: 0 }
+    },
+    {
+      id: "auto_comfort_cool",
+      name: "Tự làm mát thông minh (Auto Cool)",
+      badge: "Hiện diện + Nhiệt độ",
+      badgeColor: "#0284c7",
+      badgeBg: "#f0f9ff",
+      icon: "fa-temperature-arrow-up",
+      iconColor: "#0284c7",
+      iconBg: "#f0f9ff",
+      enabled: true,
+      triggerText: "Có người trong phòng VÀ Nhiệt độ phòng > 28.5°C",
+      actionText: "Bật Điều hòa 24°C Cool & Quạt Auto, Bật Relay 1",
+      actions: { ac_power: 1, ac_temp: 24, ac_mode: 1, ac_fan: 0, relay1: 1 }
+    },
+    {
+      id: "auto_power_protect",
+      name: "Bảo vệ quá tải điện lưới (Peak Shaving)",
+      badge: "Chất lượng điện STM32",
+      badgeColor: "#d97706",
+      badgeBg: "#fef3c7",
+      icon: "fa-bolt-lightning",
+      iconColor: "#d97706",
+      iconBg: "#fef3c7",
+      enabled: true,
+      triggerText: "Module PZEM đo công suất tổng > 2500W hoặc Điện áp < 180V",
+      actionText: "Tăng điều hòa lên 27°C Eco & Ngắt Relay 2 phụ tải",
+      actions: { ac_power: 1, ac_temp: 27, ac_mode: 1, ac_fan: 1, relay2: 0 }
+    },
+    {
+      id: "auto_night_sleep",
+      name: "Chăm sóc giấc ngủ đêm (Night Sleep)",
+      badge: "Hẹn giờ + Nhịp thở",
+      badgeColor: "#7c3aed",
+      badgeBg: "#f5f3ff",
+      icon: "fa-moon",
+      iconColor: "#7c3aed",
+      iconBg: "#f5f3ff",
+      enabled: true,
+      triggerText: "01:00 AM đêm VÀ Radar phát hiện người đứng yên (đang ngủ)",
+      actionText: "Tăng điều hòa lên 27°C chống cảm lạnh & giảm ồn quạt",
+      actions: { ac_power: 1, ac_temp: 27, ac_mode: 1, ac_fan: 1 }
+    }
+  ];
+
+  function getStoredAutomations() {
+    try {
+      const stored = localStorage.getItem("gate_user_automations");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_AUTOMATIONS;
+  }
+
+  function saveStoredAutomations(autos) {
+    localStorage.setItem("gate_user_automations", JSON.stringify(autos));
+  }
+
+  function openAutomationsView() {
     currentHubView = null;
     const homeDash = document.getElementById("view-home-dashboard");
     const subView = document.getElementById("view-device-hub");
     if (homeDash) homeDash.style.display = "none";
     if (subView) subView.style.display = "none";
+    if (viewFirmwareUpdate) viewFirmwareUpdate.style.display = "none";
+    if (viewAutomations) viewAutomations.style.display = "block";
+
+    updateSidebarActive("nav-automations");
+    renderAutomations();
+    window.location.hash = "automations";
+  }
+
+  function renderAutomations() {
+    const listEl = document.getElementById("auto-rules-list");
+    const statTotalEl = document.getElementById("stat-total-rules");
+    if (!listEl) return;
+
+    const autos = getStoredAutomations();
+    const activeCount = autos.filter(a => a.enabled).length;
+    if (statTotalEl) statTotalEl.innerText = `${activeCount.toString().padStart(2, '0')}`;
+
+    let html = "";
+    autos.forEach(rule => {
+      const isCustom = !DEFAULT_AUTOMATIONS.some(d => d.id === rule.id);
+      html += `
+        <div class="auto-rule-card ${rule.enabled ? '' : 'is-disabled'}" data-auto-id="${escapeHtml(rule.id)}">
+          <div class="auto-rule-top">
+            <div class="auto-rule-icon" style="background: ${escapeHtml(rule.iconBg || '#ecfdf5')}; color: ${escapeHtml(rule.iconColor || '#00b06f')};">
+              <i class="fa-solid ${escapeHtml(rule.icon || 'fa-bolt')}"></i>
+            </div>
+            <div class="auto-rule-title-box">
+              <h4 class="auto-rule-name">${escapeHtml(rule.name)}</h4>
+              <span class="auto-rule-badge" style="background: ${escapeHtml(rule.badgeBg || '#ecfdf5')}; color: ${escapeHtml(rule.badgeColor || '#00b06f')};">
+                ${escapeHtml(rule.badge || 'Tự động')}
+              </span>
+            </div>
+            <label class="modern-toggle-switch" title="${rule.enabled ? 'Đang bật tự động hóa' : 'Đang tắt'}">
+              <input type="checkbox" class="toggle-auto-active" data-id="${escapeHtml(rule.id)}" ${rule.enabled ? 'checked' : ''}>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="auto-flow-box">
+            <div class="auto-flow-item">
+              <span class="flow-tag if">KHI</span>
+              <span>${escapeHtml(rule.triggerText)}</span>
+            </div>
+            <div class="auto-flow-item">
+              <span class="flow-tag then">THÌ</span>
+              <span>${escapeHtml(rule.actionText)}</span>
+            </div>
+          </div>
+
+          <div class="auto-card-footer">
+            <button type="button" class="btn-auto-test" data-id="${escapeHtml(rule.id)}" title="Chạy thử nghiệm kịch bản này ngay">
+              <i class="fa-solid fa-play"></i> Chạy thử
+            </button>
+            ${isCustom ? `
+              <button type="button" class="btn-auto-del" data-id="${escapeHtml(rule.id)}" title="Xóa kịch bản này">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    });
+
+    listEl.innerHTML = html;
+
+    listEl.querySelectorAll(".toggle-auto-active").forEach(chk => {
+      chk.addEventListener("change", () => {
+        const id = chk.getAttribute("data-id");
+        const autos = getStoredAutomations();
+        const target = autos.find(a => a.id === id);
+        if (target) {
+          target.enabled = chk.checked;
+          saveStoredAutomations(autos);
+          renderAutomations();
+          showToast(`Kịch bản [${target.name}] đã ${chk.checked ? 'KÍCH HOẠT' : 'TẠM DỪNG'}!`, chk.checked ? "success" : "info");
+        }
+      });
+    });
+
+    listEl.querySelectorAll(".btn-auto-test").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        const rule = getStoredAutomations().find(a => a.id === id);
+        if (!rule) return;
+
+        const icon = btn.querySelector("i");
+        if (icon) icon.className = "fa-solid fa-spinner fa-spin";
+        showToast(`Đang chạy thử: [${rule.name}]...`, "info");
+
+        if (rule.actions) {
+          const acts = rule.actions;
+          if (acts.ac_power !== undefined) {
+            acState.power = acts.ac_power;
+            if (acts.ac_temp > 0) acState.temp = acts.ac_temp;
+            if (acts.ac_mode !== undefined) acState.mode = acts.ac_mode;
+            if (acts.ac_fan !== undefined) acState.fan = acts.ac_fan;
+            updateAcModalUI();
+            await callApi("/api/hvac/control", "POST", {
+              power: acState.power,
+              temp: acState.temp,
+              mode: acState.mode,
+              fan: acState.fan
+            });
+          }
+          if (acts.relay1 !== undefined && acts.relay1 >= 0) {
+            relayStates[1] = acts.relay1;
+            await callApi("/api/gateway/relay/1", "POST", { state: acts.relay1 });
+          }
+          if (acts.relay2 !== undefined && acts.relay2 >= 0) {
+            relayStates[2] = acts.relay2;
+            await callApi("/api/gateway/relay/2", "POST", { state: acts.relay2 });
+          }
+          renderDevices();
+        }
+
+        setTimeout(() => {
+          if (icon) icon.className = "fa-solid fa-play";
+          showToast(`Kịch bản [${rule.name}] đã thực thi lệnh thành công!`, "success");
+        }, 500);
+      });
+    });
+
+    listEl.querySelectorAll(".btn-auto-del").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        if (confirm("Bạn có chắc chắn muốn xóa kịch bản này?")) {
+          const filtered = getStoredAutomations().filter(a => a.id !== id);
+          saveStoredAutomations(filtered);
+          renderAutomations();
+          showToast("Đã xóa kịch bản tự động hóa!", "info");
+        }
+      });
+    });
+  }
+
+  // ── MODAL TẠO TỰ ĐỘNG HÓA MỚI (AUTOMATION BUILDER) ─────────────────────────
+  const modalAutomationBuilder = document.getElementById("modal-automation-builder");
+  const btnCloseAutoModal = document.getElementById("btn-close-auto-modal");
+  const btnCloseAutoModal2 = document.getElementById("btn-close-auto-modal2");
+  const btnSaveAutomation = document.getElementById("btn-save-automation");
+  const inputAutoName = document.getElementById("input-auto-name");
+  const autoTriggerType = document.getElementById("auto-trigger-type");
+  const triggerExtraConfig = document.getElementById("trigger-extra-config");
+  const triggerExtraLabel = document.getElementById("trigger-extra-label");
+  const triggerExtraVal = document.getElementById("trigger-extra-val");
+  const triggerExtraUnit = document.getElementById("trigger-extra-unit");
+  const autoActAcPower = document.getElementById("auto-act-ac-power");
+  const autoActAcDetails = document.getElementById("auto-act-ac-details");
+  const autoActAcTemp = document.getElementById("auto-act-ac-temp");
+  const autoActAcMode = document.getElementById("auto-act-ac-mode");
+  const autoActRelay1 = document.getElementById("auto-act-relay1");
+
+  if (autoTriggerType) {
+    autoTriggerType.addEventListener("change", () => {
+      const val = autoTriggerType.value;
+      if (val === "presence_unoccupied") {
+        if (triggerExtraConfig) triggerExtraConfig.style.display = "flex";
+        if (triggerExtraLabel) triggerExtraLabel.innerText = "Duy trì trong thời gian tối thiểu:";
+        if (triggerExtraVal) triggerExtraVal.value = 5;
+        if (triggerExtraUnit) triggerExtraUnit.innerText = "phút";
+      } else if (val === "presence_occupied") {
+        if (triggerExtraConfig) triggerExtraConfig.style.display = "none";
+      } else if (val === "temp_high") {
+        if (triggerExtraConfig) triggerExtraConfig.style.display = "flex";
+        if (triggerExtraLabel) triggerExtraLabel.innerText = "Nhiệt độ phòng lớn hơn:";
+        if (triggerExtraVal) triggerExtraVal.value = 28;
+        if (triggerExtraUnit) triggerExtraUnit.innerText = "°C";
+      } else if (val === "power_high") {
+        if (triggerExtraConfig) triggerExtraConfig.style.display = "flex";
+        if (triggerExtraLabel) triggerExtraLabel.innerText = "Công suất tiêu thụ lớn hơn:";
+        if (triggerExtraVal) triggerExtraVal.value = 2000;
+        if (triggerExtraUnit) triggerExtraUnit.innerText = "Watt (W)";
+      } else if (val === "time_schedule") {
+        if (triggerExtraConfig) triggerExtraConfig.style.display = "flex";
+        if (triggerExtraLabel) triggerExtraLabel.innerText = "Thời điểm hẹn giờ:";
+        if (triggerExtraVal) triggerExtraVal.value = 23;
+        if (triggerExtraUnit) triggerExtraUnit.innerText = "giờ đêm";
+      }
+    });
+  }
+
+  if (autoActAcPower) {
+    autoActAcPower.addEventListener("change", () => {
+      if (autoActAcDetails) {
+        autoActAcDetails.style.display = (autoActAcPower.value === "1") ? "flex" : "none";
+      }
+    });
+  }
+
+  function openAutomationBuilderModal() {
+    if (inputAutoName) inputAutoName.value = "";
+    if (autoActAcPower) autoActAcPower.value = "0";
+    if (autoActAcDetails) autoActAcDetails.style.display = "none";
+    if (modalAutomationBuilder) modalAutomationBuilder.classList.remove("hidden");
+  }
+
+  function closeAutomationBuilderModal() {
+    if (modalAutomationBuilder) modalAutomationBuilder.classList.add("hidden");
+  }
+
+  if (btnOpenCreateAuto) btnOpenCreateAuto.addEventListener("click", openAutomationBuilderModal);
+  if (btnCloseAutoModal) btnCloseAutoModal.addEventListener("click", closeAutomationBuilderModal);
+  if (btnCloseAutoModal2) btnCloseAutoModal2.addEventListener("click", closeAutomationBuilderModal);
+
+  if (btnSaveAutomation) {
+    btnSaveAutomation.addEventListener("click", () => {
+      const name = inputAutoName ? inputAutoName.value.trim() : "";
+      if (!name) {
+        showToast("Vui lòng nhập tên kịch bản tự động hóa!", "error");
+        return;
+      }
+
+      const trigVal = autoTriggerType ? autoTriggerType.value : "presence_unoccupied";
+      const extraVal = triggerExtraVal ? triggerExtraVal.value : "5";
+      let triggerText = "";
+      let badge = "Tự động";
+      let icon = "fa-bolt";
+      let iconColor = "#00b06f";
+      let iconBg = "#ecfdf5";
+
+      if (trigVal === "presence_unoccupied") {
+        triggerText = `Radar LD2410B phát hiện phòng TRỐNG liên tục ≥ ${extraVal} phút`;
+        badge = "Radar mmWave";
+        icon = "fa-person-walking-arrow-right";
+        iconColor = "#059669";
+        iconBg = "#ecfdf5";
+      } else if (trigVal === "presence_occupied") {
+        triggerText = "Radar LD2410B phát hiện CÓ NGƯỜI bước vào phòng";
+        badge = "Radar mmWave";
+        icon = "fa-person-walking";
+        iconColor = "#0284c7";
+        iconBg = "#f0f9ff";
+      } else if (trigVal === "temp_high") {
+        triggerText = `Cảm biến SHT30 đo nhiệt độ phòng vượt ngưỡng > ${extraVal}°C`;
+        badge = "Nhiệt độ";
+        icon = "fa-temperature-arrow-up";
+        iconColor = "#ea580c";
+        iconBg = "#fff7ed";
+      } else if (trigVal === "power_high") {
+        triggerText = `PZEM STM32 phát hiện công suất điện tiêu thụ > ${extraVal} W`;
+        badge = "Chất lượng điện";
+        icon = "fa-bolt-lightning";
+        iconColor = "#d97706";
+        iconBg = "#fef3c7";
+      } else if (trigVal === "time_schedule") {
+        triggerText = `Hẹn giờ kích hoạt tự động vào lúc ${extraVal}:00 hàng ngày`;
+        badge = "Hẹn giờ";
+        icon = "fa-clock";
+        iconColor = "#7c3aed";
+        iconBg = "#f5f3ff";
+      }
+
+      const actions = {};
+      const actParts = [];
+      const acPwr = Number(autoActAcPower ? autoActAcPower.value : -1);
+      if (acPwr !== -1) {
+        actions.ac_power = acPwr;
+        if (acPwr === 1) {
+          actions.ac_temp = Number(autoActAcTemp ? autoActAcTemp.value : 25);
+          actions.ac_mode = Number(autoActAcMode ? autoActAcMode.value : 1);
+          actions.ac_fan = 0;
+          actParts.push(`Bật Điều hòa ${actions.ac_temp}°C`);
+        } else {
+          actParts.push("Tắt Điều hòa");
+        }
+      }
+
+      const r1 = Number(autoActRelay1 ? autoActRelay1.value : -1);
+      if (r1 !== -1) {
+        actions.relay1 = r1;
+        actParts.push(r1 === 1 ? "Bật Đèn (R1)" : "Tắt Đèn (R1)");
+      }
+
+      const newAuto = {
+        id: "auto_custom_" + Date.now(),
+        name,
+        badge,
+        badgeColor: iconColor,
+        badgeBg: iconBg,
+        icon,
+        iconColor,
+        iconBg,
+        enabled: true,
+        triggerText,
+        actionText: actParts.length > 0 ? actParts.join(" &bull; ") : "Kích hoạt thiết bị",
+        actions
+      };
+
+      const autos = getStoredAutomations();
+      autos.push(newAuto);
+      saveStoredAutomations(autos);
+      renderAutomations();
+      closeAutomationBuilderModal();
+      showToast(`Đã lưu kịch bản [${name}] thành công!`, "success");
+    });
+  }
+
+  // Mở màn hình cập nhật Firmware OTA
+  function openFirmwareView() {
+    currentHubView = null;
+    const homeDash = document.getElementById("view-home-dashboard");
+    const subView = document.getElementById("view-device-hub");
+    const autoView = document.getElementById("view-automations");
+    if (homeDash) homeDash.style.display = "none";
+    if (subView) subView.style.display = "none";
+    if (autoView) autoView.style.display = "none";
     if (viewFirmwareUpdate) viewFirmwareUpdate.style.display = "block";
 
     updateSidebarActive("nav-firmware");
@@ -4751,6 +5363,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Gán sự kiện điều hướng Tự động hóa thông minh
+  if (navAutomationsBtn) {
+    navAutomationsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      openAutomationsView();
+    });
+  }
+
+  if (btnAutoBack) {
+    btnAutoBack.addEventListener("click", () => {
+      closeHubSubView(true);
+      window.location.hash = "";
+    });
+  }
+
   if (btnOtaRefresh) {
     btnOtaRefresh.addEventListener("click", async () => {
       const icon = btnOtaRefresh.querySelector("i");
@@ -4872,6 +5499,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function checkUrlHashRoute() {
     if (window.location.hash === "#firmware" || window.location.hash === "#ota") {
       openFirmwareView();
+    } else if (window.location.hash === "#automations") {
+      openAutomationsView();
     }
   }
   window.addEventListener("hashchange", checkUrlHashRoute);
@@ -4879,6 +5508,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Khởi tạo ban đầu
   renderDevices();
+  renderFavoriteScenes();
   updateAcModalUI();
   fetchStatus();
   setInterval(fetchStatus, 2500);

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="css/style.css?v=71">
+  <link rel="stylesheet" href="css/style.css?v=85">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -66,6 +66,10 @@
         <a href="javascript:void(0)" class="nav-item" id="nav-notifs">
           <i class="fa-regular fa-bell nav-icon"></i>
           <span>Thông báo</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" id="nav-automations">
+          <i class="fa-solid fa-bolt-lightning nav-icon"></i>
+          <span>Tự động hóa</span>
         </a>
         <a href="javascript:void(0)" class="nav-item" id="nav-firmware">
           <i class="fa-solid fa-cloud-arrow-up nav-icon"></i>
@@ -268,22 +272,34 @@
             </button>
           </div>
 
-          <div class="scenes-chips-row">
-            <div class="scene-chip" id="scene-home">
-              <i class="fa-solid fa-house-user chip-icon"></i>
-              <span>Về nhà (25°C Cool)</span>
+          <div class="scenes-chips-row" id="scenes-chips-container">
+            <div class="scene-chip" data-scene-id="scene_home">
+              <i class="fa-solid fa-house-user chip-icon" style="color:#00b06f;"></i>
+              <div class="scene-chip-text">
+                <span class="scene-chip-name">Về nhà (25°C Cool)</span>
+                <span class="scene-chip-sub">AC 25°C &bull; Cool &bull; R1 Bật</span>
+              </div>
             </div>
-            <div class="scene-chip" id="scene-sleep">
-              <i class="fa-solid fa-moon chip-icon"></i>
-              <span>Đi ngủ (27°C)</span>
+            <div class="scene-chip" data-scene-id="scene_sleep">
+              <i class="fa-solid fa-moon chip-icon" style="color:#0284c7;"></i>
+              <div class="scene-chip-text">
+                <span class="scene-chip-name">Đi ngủ (27°C)</span>
+                <span class="scene-chip-sub">AC 27°C &bull; Quạt êm</span>
+              </div>
             </div>
-            <div class="scene-chip" id="scene-cool-fast">
-              <i class="fa-solid fa-snowflake chip-icon"></i>
-              <span>Làm mát nhanh (22°C)</span>
+            <div class="scene-chip" data-scene-id="scene_cool_fast">
+              <i class="fa-solid fa-snowflake chip-icon" style="color:#06b6d4;"></i>
+              <div class="scene-chip-text">
+                <span class="scene-chip-name">Làm mát nhanh (20°C)</span>
+                <span class="scene-chip-sub">AC 20°C &bull; Quạt Max</span>
+              </div>
             </div>
-            <div class="scene-chip" id="scene-power-save">
-              <i class="fa-solid fa-leaf chip-icon"></i>
-              <span>Tiết kiệm điện (Tắt hết)</span>
+            <div class="scene-chip" data-scene-id="scene_power_save">
+              <i class="fa-solid fa-leaf chip-icon" style="color:#10b981;"></i>
+              <div class="scene-chip-text">
+                <span class="scene-chip-name">Tiết kiệm điện</span>
+                <span class="scene-chip-sub">Tắt toàn bộ thiết bị</span>
+              </div>
             </div>
           </div>
         </section>
@@ -626,6 +642,72 @@
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- VIEW 4: TỰ ĐỘNG HÓA THÔNG MINH (SMART AUTOMATIONS ENGINE)         -->
+        <!-- ================================================================ -->
+        <div id="view-automations" class="hunonic-subview view-automations" style="display: none;">
+          <!-- Top Header Bar -->
+          <div class="subview-header-bar">
+            <div class="subview-header-left">
+              <button type="button" class="btn-subview-back" id="btn-auto-back" title="Quay lại Trang chủ">
+                <i class="fa-solid fa-arrow-left"></i>
+              </button>
+              <div class="subview-title-group">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(245, 158, 11, 0.15); color: #d97706; font-size: 1.15rem;">
+                  <i class="fa-solid fa-bolt-lightning"></i>
+                </span>
+                <div>
+                  <h3 class="subview-title" style="margin: 0; font-size: 1.15rem;">Tự Động Hóa Thông Minh (Smart Automations)</h3>
+                  <div style="font-size: 0.78rem; color: #64748b; font-weight: 500;">Quy tắc tự hành thông minh theo Radar hiện diện LD2410B, nhiệt độ SHT30 &amp; đo điện PZEM</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="subview-header-right">
+              <button type="button" class="btn-subview-action" id="btn-open-create-auto" style="background: linear-gradient(135deg, #00b06f, #059669); color: #fff; border: none; box-shadow: 0 4px 12px rgba(0,176,111,0.25); display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 8px; font-weight: 600; font-size: 0.82rem; cursor: pointer;">
+                <i class="fa-solid fa-plus"></i> <span>Tạo Kịch Bản</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Stats Banners Row -->
+          <div class="auto-stats-grid">
+            <div class="auto-stat-card">
+              <div class="stat-icon-wrap" style="background: #ecfdf5; color: #00b06f;"><i class="fa-solid fa-sliders"></i></div>
+              <div>
+                <span class="stat-val" id="stat-total-rules">04</span>
+                <span class="stat-lbl">Kịch bản kích hoạt</span>
+              </div>
+            </div>
+            <div class="auto-stat-card">
+              <div class="stat-icon-wrap" style="background: #f0f9ff; color: #0284c7;"><i class="fa-solid fa-person-walking"></i></div>
+              <div>
+                <span class="stat-val" style="color: #0284c7;">Radar LD2410B</span>
+                <span class="stat-lbl">Sóng mmWave nhạy cao</span>
+              </div>
+            </div>
+            <div class="auto-stat-card">
+              <div class="stat-icon-wrap" style="background: #fefce8; color: #eab308;"><i class="fa-solid fa-leaf"></i></div>
+              <div>
+                <span class="stat-val" style="color: #ca8a04;">~32%</span>
+                <span class="stat-lbl">Tiết kiệm điện dự tính</span>
+              </div>
+            </div>
+            <div class="auto-stat-card">
+              <div class="stat-icon-wrap" style="background: #fdf2f8; color: #db2777;"><i class="fa-solid fa-robot"></i></div>
+              <div>
+                <span class="stat-val text-green" style="font-size: 0.95rem;">ĐANG TỰ HÀNH</span>
+                <span class="stat-lbl">Động cơ quy tắc ECA</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danh sách Kịch bản Tự Động Hóa -->
+          <div class="auto-rules-container" id="auto-rules-list">
+            <!-- Dynamic automation cards rendered here -->
           </div>
         </div>
       </main>
@@ -1366,9 +1448,244 @@
     <span id="sensor-rssi">--</span>
   </div>
 
+  <!-- ==================================================================== -->
+  <!-- MODAL: TẠO / SỬA NGỮ CẢNH 1 CHẠM (SCENE BUILDER MODAL)                -->
+  <!-- ==================================================================== -->
+  <div class="hvac-modal-overlay hidden" id="modal-scene-builder">
+    <div class="hvac-modal-card scene-builder-card" style="max-width: 520px; width: 92%;">
+      <div class="modal-header">
+        <div class="modal-title-col">
+          <h3 id="scene-modal-title"><i class="fa-solid fa-wand-magic-sparkles text-green"></i> Thiết Lập Ngữ Cảnh Mới</h3>
+          <span class="modal-sub">Kích hoạt nhiều thiết bị đồng thời chỉ với một chạm</span>
+        </div>
+        <button class="modal-close-btn" id="btn-close-scene-modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px 24px; max-height: 75vh; overflow-y: auto;">
+        <!-- Tên ngữ cảnh -->
+        <div class="form-group-field" style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Tên ngữ cảnh *</label>
+          <input type="text" id="input-scene-name" placeholder="Ví dụ: Tiếp khách, Xem phim, Thư giãn..." style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.9rem; outline: none; box-sizing: border-box;" />
+        </div>
+
+        <!-- Chọn Icon -->
+        <div class="form-group-field" style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Biểu tượng ngữ cảnh</label>
+          <div class="icon-picker-grid" id="scene-icon-picker">
+            <button type="button" class="icon-picker-btn active" data-icon="fa-couch"><i class="fa-solid fa-couch"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-mug-hot"><i class="fa-solid fa-mug-hot"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-tv"><i class="fa-solid fa-tv"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-moon"><i class="fa-solid fa-moon"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-house-user"><i class="fa-solid fa-house-user"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-snowflake"><i class="fa-solid fa-snowflake"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-book-open"><i class="fa-solid fa-book-open"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-dumbbell"><i class="fa-solid fa-dumbbell"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-music"><i class="fa-solid fa-music"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-sun"><i class="fa-solid fa-sun"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-leaf"><i class="fa-solid fa-leaf"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-gamepad"><i class="fa-solid fa-gamepad"></i></button>
+          </div>
+        </div>
+
+        <!-- Chọn Màu sắc Theme -->
+        <div class="form-group-field" style="margin-bottom: 18px;">
+          <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Tông màu hiển thị</label>
+          <div class="color-picker-row" id="scene-color-picker">
+            <span class="color-dot active" data-color="#00b06f" style="background:#00b06f;"></span>
+            <span class="color-dot" data-color="#0284c7" style="background:#0284c7;"></span>
+            <span class="color-dot" data-color="#8b5cf6" style="background:#8b5cf6;"></span>
+            <span class="color-dot" data-color="#f59e0b" style="background:#f59e0b;"></span>
+            <span class="color-dot" data-color="#ef4444" style="background:#ef4444;"></span>
+            <span class="color-dot" data-color="#64748b" style="background:#64748b;"></span>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid #e2e8f0; margin: 16px 0;"></div>
+
+        <h4 style="font-size: 0.92rem; font-weight: 700; color: #0f172a; margin: 0 0 12px; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-sliders text-green"></i> Thiết Bị Điều Khiển (Hành Động)
+        </h4>
+
+        <!-- Điều khiển Điều hòa -->
+        <div class="scene-device-card" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-wind" style="color: #0284c7;"></i>
+              <strong style="font-size: 0.85rem; color: #1e293b;">Điều Hòa (IR Hunonic)</strong>
+            </div>
+            <label class="modern-toggle-switch">
+              <input type="checkbox" id="scene-ac-enable" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div id="scene-ac-options" style="display: block;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+              <select id="scene-ac-power" style="flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.82rem; background: #fff;">
+                <option value="1">BẬT Điều hòa</option>
+                <option value="0">TẮT Điều hòa</option>
+              </select>
+              <select id="scene-ac-mode" style="flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.82rem; background: #fff;">
+                <option value="1">Làm mát (Cool)</option>
+                <option value="2">Sưởi ấm (Heat)</option>
+                <option value="3">Hút ẩm (Dry)</option>
+                <option value="4">Quạt gió (Fan)</option>
+                <option value="0">Tự động (Auto)</option>
+              </select>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <span style="font-size: 0.82rem; color: #475569;">Nhiệt độ cài đặt:</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" class="btn-micro-step" id="btn-scene-temp-minus">-</button>
+                <span id="scene-temp-display" style="font-size: 1rem; font-weight: 700; color: #00b06f; min-width: 44px; text-align: center;">25°C</span>
+                <button type="button" class="btn-micro-step" id="btn-scene-temp-plus">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Điều khiển Relay Gateway -->
+        <div class="scene-device-card" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-server" style="color: #00b06f;"></i>
+              <strong style="font-size: 0.85rem; color: #1e293b;">Relay Trạm Gateway ESP32-S3</strong>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label style="display: block; font-size: 0.78rem; color: #64748b; margin-bottom: 4px;">Relay 1 (Đèn chính):</label>
+              <select id="scene-relay1-act" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.82rem; background: #fff;">
+                <option value="-1">Không thay đổi</option>
+                <option value="1">BẬT (ON)</option>
+                <option value="0">TẮT (OFF)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.78rem; color: #64748b; margin-bottom: 4px;">Relay 2 (Phụ tải):</label>
+              <select id="scene-relay2-act" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.82rem; background: #fff;">
+                <option value="-1">Không thay đổi</option>
+                <option value="1">BẬT (ON)</option>
+                <option value="0">TẮT (OFF)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" class="btn-cancel-modal" id="btn-cancel-scene-modal" style="padding: 10px 18px; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; font-weight: 600; color: #64748b; cursor: pointer;">Hủy bỏ</button>
+          <button type="button" id="btn-save-scene" style="padding: 10px 22px; background: linear-gradient(135deg, #00b06f, #059669); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,176,111,0.3);">Lưu Ngữ Cảnh</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL: TẠO / SỬA KỊCH BẢN TỰ ĐỘNG HÓA (AUTOMATION BUILDER)             -->
+  <!-- ==================================================================== -->
+  <div class="hvac-modal-overlay hidden" id="modal-automation-builder">
+    <div class="hvac-modal-card automation-builder-card" style="max-width: 560px; width: 92%;">
+      <div class="modal-header">
+        <div class="modal-title-col">
+          <h3 id="auto-modal-title"><i class="fa-solid fa-bolt-lightning" style="color: #f59e0b;"></i> Thiết Lập Tự Động Hóa</h3>
+          <span class="modal-sub">Hệ thống tự động thực thi dựa theo cảm biến Radar LD2410B, SHT30 &amp; PZEM</span>
+        </div>
+        <button class="modal-close-btn" id="btn-close-auto-modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px 24px; max-height: 75vh; overflow-y: auto;">
+        <!-- Tên kịch bản -->
+        <div class="form-group-field" style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Tên kịch bản tự động hóa *</label>
+          <input type="text" id="input-auto-name" placeholder="Ví dụ: Tự tắt AC khi vắng người 5 phút..." style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.9rem; outline: none; box-sizing: border-box;" />
+        </div>
+
+        <!-- Khối BƯỚC 1: KHI NÀO? (TRIGGER) -->
+        <div class="auto-rule-box" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; padding: 16px; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <span style="background: #00b06f; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">1</span>
+            <strong style="color: #166534; font-size: 0.88rem;">KHI NÀO? (Bộ kích hoạt - Trigger)</strong>
+          </div>
+          
+          <div style="margin-bottom: 10px;">
+            <select id="auto-trigger-type" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.85rem; font-weight: 600; background: #fff;">
+              <option value="presence_unoccupied">Cảm biến Radar mmWave: Phòng TRỐNG (Vắng người)</option>
+              <option value="presence_occupied">Cảm biến Radar mmWave: Phát hiện CÓ NGƯỜI</option>
+              <option value="temp_high">Cảm biến Môi trường: Nhiệt độ vượt quá ngưỡng cao (&gt; °C)</option>
+              <option value="power_high">Giám sát Điện năng: Tổng công suất quá tải (&gt; Watt)</option>
+              <option value="time_schedule">Hẹn giờ cố định trong ngày (Ví dụ: 23:00 hàng đêm)</option>
+            </select>
+          </div>
+
+          <div id="trigger-extra-config" style="display: flex; align-items: center; gap: 10px; background: #fff; padding: 10px 12px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+            <span style="font-size: 0.82rem; color: #475569;" id="trigger-extra-label">Duy trì trong thời gian tối thiểu:</span>
+            <input type="number" id="trigger-extra-val" value="5" min="1" max="120" style="width: 70px; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; text-align: center;" />
+            <span style="font-size: 0.82rem; color: #475569;" id="trigger-extra-unit">phút</span>
+          </div>
+        </div>
+
+        <!-- Mũi tên liên kết -->
+        <div style="text-align: center; margin: -6px 0 8px; color: #00b06f; font-size: 1.15rem;">
+          <i class="fa-solid fa-arrow-down"></i>
+        </div>
+
+        <!-- Khối BƯỚC 2: THÌ LÀM GÌ? (ACTION) -->
+        <div class="auto-rule-box" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <span style="background: #0284c7; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">2</span>
+            <strong style="color: #0369a1; font-size: 0.88rem;">THÌ THỰC HIỆN (Hành động - Action)</strong>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Hành động AC -->
+            <div style="background: #fff; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.82rem; font-weight: 600; color: #1e293b;"><i class="fa-solid fa-wind" style="color: #0284c7;"></i> Điều hòa HVAC:</span>
+                <select id="auto-act-ac-power" style="padding: 5px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.8rem; background: #fff;">
+                  <option value="0">TẮT ĐIỀU HÒA</option>
+                  <option value="1">BẬT ĐIỀU HÒA</option>
+                  <option value="-1">Không đổi</option>
+                </select>
+              </div>
+              <div id="auto-act-ac-details" style="display: none; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.8rem; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                <span>Nhiệt độ:</span>
+                <input type="number" id="auto-act-ac-temp" value="25" min="16" max="30" style="width: 50px; padding: 4px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center;" /> °C
+                <span style="margin-left: 6px;">Chế độ:</span>
+                <select id="auto-act-ac-mode" style="padding: 4px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff;">
+                  <option value="1">Cool</option>
+                  <option value="3">Dry</option>
+                  <option value="4">Fan</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Hành động Relay -->
+            <div style="background: #fff; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.82rem; font-weight: 600; color: #1e293b;"><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Relay 1 (Đèn chính):</span>
+              <select id="auto-act-relay1" style="padding: 5px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.8rem; background: #fff;">
+                <option value="0">TẮT ĐÈN</option>
+                <option value="1">BẬT ĐÈN</option>
+                <option value="-1">Không đổi</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" class="btn-cancel-modal" id="btn-close-auto-modal2" style="padding: 10px 18px; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; font-weight: 600; color: #64748b; cursor: pointer;">Hủy bỏ</button>
+          <button type="button" id="btn-save-automation" style="padding: 10px 22px; background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(2,132,199,0.3);">Lưu Kịch Bản</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="js/app.js?v=82"></script>
+  <script src="js/app.js?v=85"></script>
 </body>
 </html>
