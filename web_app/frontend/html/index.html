@@ -1640,41 +1640,24 @@
           <i class="fa-solid fa-sliders text-green"></i> Thiết Bị Điều Khiển (Hành Động)
         </h4>
 
-        <!-- Điều khiển Điều hòa -->
-        <div class="scene-device-card" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <i class="fa-solid fa-wind" style="color: #0284c7;"></i>
-              <strong style="font-size: 0.85rem; color: #1e293b;">Điều Hòa (IR Hunonic)</strong>
-            </div>
-            <label class="modern-toggle-switch">
-              <input type="checkbox" id="scene-ac-enable" checked>
-              <span class="slider round"></span>
+        <!-- Danh Sách Thiết Bị Điều Hòa (HVAC) Tự Động Nhận Diện Đa Thiết Bị -->
+        <div style="margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-wind" style="color: #0284c7;"></i> Điều Hòa Không Khí (HVAC)
             </label>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btn-scene-ac-all-on" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0284c7; font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; cursor: pointer;">
+                <i class="fa-solid fa-power-off"></i> Bật tất cả
+              </button>
+              <button type="button" id="btn-scene-ac-all-off" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; cursor: pointer;">
+                <i class="fa-solid fa-power-off"></i> Tắt tất cả
+              </button>
+            </div>
           </div>
-
-          <div id="scene-ac-options" style="display: block;">
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-              <select id="scene-ac-power" style="flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.82rem; background: #fff;">
-                <option value="1">BẬT Điều hòa</option>
-                <option value="0">TẮT Điều hòa</option>
-              </select>
-              <select id="scene-ac-mode" style="flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.82rem; background: #fff;">
-                <option value="1">Làm mát (Cool)</option>
-                <option value="2">Sưởi ấm (Heat)</option>
-                <option value="3">Hút ẩm (Dry)</option>
-                <option value="4">Quạt gió (Fan)</option>
-                <option value="0">Tự động (Auto)</option>
-              </select>
-            </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-              <span style="font-size: 0.82rem; color: #475569;">Nhiệt độ cài đặt:</span>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <button type="button" class="btn-micro-step" id="btn-scene-temp-minus">-</button>
-                <span id="scene-temp-display" style="font-size: 1rem; font-weight: 700; color: #00b06f; min-width: 44px; text-align: center;">25°C</span>
-                <button type="button" class="btn-micro-step" id="btn-scene-temp-plus">+</button>
-              </div>
-            </div>
+          <!-- Container render động toàn bộ các điều hòa trong nhà -->
+          <div id="scene-ac-devices-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow-y: auto; padding-right: 4px;">
+            <!-- JS render các điều hòa tại đây -->
           </div>
         </div>
 
@@ -1775,8 +1758,14 @@
           <div style="display: flex; flex-direction: column; gap: 10px;">
             <!-- Hành động AC -->
             <div style="background: #fff; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="margin-bottom: 8px;">
+                <label style="display: block; font-size: 0.76rem; font-weight: 600; color: #64748b; margin-bottom: 4px;">Áp dụng cho Điều hòa:</label>
+                <select id="auto-act-ac-target" style="width: 100%; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.82rem; background: #fff;">
+                  <option value="all">Tất cả điều hòa trong nhà (Toàn bộ)</option>
+                </select>
+              </div>
               <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.82rem; font-weight: 600; color: #1e293b;"><i class="fa-solid fa-wind" style="color: #0284c7;"></i> Điều hòa HVAC:</span>
+                <span style="font-size: 0.82rem; font-weight: 600; color: #1e293b;"><i class="fa-solid fa-wind" style="color: #0284c7;"></i> Lệnh thực hiện:</span>
                 <select id="auto-act-ac-power" style="padding: 5px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.8rem; background: #fff;">
                   <option value="0">TẮT ĐIỀU HÒA</option>
                   <option value="1">BẬT ĐIỀU HÒA</option>

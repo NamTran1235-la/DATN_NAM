@@ -3537,7 +3537,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const acts = sc.actions || {};
 
-    if (acts.ac_power !== undefined) {
+    if (Array.isArray(acts.ac_devices) && acts.ac_devices.length > 0) {
+      for (const devAct of acts.ac_devices) {
+        await callApi("/api/hvac/control", "POST", {
+          device_id: devAct.device_id,
+          power: devAct.power,
+          temp: devAct.temp,
+          mode: devAct.mode,
+          fan: devAct.fan || 0
+        }).catch(err => console.error("Scene AC dev error:", err));
+
+        // Cập nhật trạng thái bộ nhớ
+        const hub = getActiveIrHub() || customDevices.find(d => d.type === "ir_hub");
+        if (hub && Array.isArray(hub.children)) {
+          const target = hub.children.find(c => String(c.id) === String(devAct.device_id));
+          if (target) {
+            target.power = devAct.power;
+            target.state = devAct.power;
+            target.temp = devAct.temp;
+            target.mode = devAct.mode;
+          }
+        }
+      }
+      acState.power = acts.ac_devices[0].power;
+      acState.temp = acts.ac_devices[0].temp;
+      acState.mode = acts.ac_devices[0].mode;
+      updateAcModalUI();
+      renderDevices();
+    } else if (acts.ac_power !== undefined) {
       acState.power = acts.ac_power;
       if (acts.ac_temp > 0) acState.temp = acts.ac_temp;
       if (acts.ac_mode !== undefined) acState.mode = acts.ac_mode;
@@ -3574,7 +3601,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ── MODAL THIẾT LẬP NGỮ CẢNH (SCENE BUILDER) ──────────────────────────────
+  // ── TRUY VẤN TẤT CẢ ĐIỀU HÒA HIỆN CÓ TRONG HỆ THỐNG ──────────────────────
+  function getAllAvailableAcs() {
+    const hub = getActiveIrHub() || customDevices.find(d => d.type === "ir_hub" || (d.id && d.id.includes("ir_hub")));
+    if (hub && Array.isArray(hub.children) && hub.children.length > 0) {
+      return hub.children.filter(c => c.type === "ac");
+    }
+    if (window.lastGatewayStatus && window.lastGatewayStatus.ac_devices && Object.keys(window.lastGatewayStatus.ac_devices).length > 0) {
+      return Object.entries(window.lastGatewayStatus.ac_devices).map(([did, dinfo]) => ({
+        id: String(did),
+        name: dinfo.name || `Điều hòa ${did}`,
+        brand_name: dinfo.brand_name || (dinfo.brand === 102 ? "Casper" : dinfo.brand === 16 ? "Casper - Electra" : dinfo.brand === 117 ? "Mirage" : "Funiki"),
+        power: dinfo.power || 0,
+        temp: dinfo.temp || 25,
+        mode: dinfo.mode || 1,
+        fan: dinfo.fan || 0
+      }));
+    }
+    return [
+      { id: "4083460", name: "Điều hòa CASPER", brand_name: "Casper", power: 0, temp: 25, mode: 1 },
+      { id: "4083479", name: "Điều hòa CASPER - ELECTRA", brand_name: "Casper - Electra", power: 0, temp: 25, mode: 1 },
+      { id: "4090277", name: "Điều hòa MIRAGE", brand_name: "Mirage", power: 0, temp: 26, mode: 1 },
+      { id: "4094979", name: "Điều hòa FUNIKI", brand_name: "Funiki", power: 0, temp: 25, mode: 1 }
+    ];
+  }
+  window.getAllAvailableAcs = getAllAvailableAcs;
+
+  // ── MODAL THIẾT LẬP NGỮ CẢNH (SCENE BUILDER ĐA ĐIỀU HÒA) ────────────────────
   const modalSceneBuilder = document.getElementById("modal-scene-builder");
   const btnAddScene = document.getElementById("btn-add-scene");
   const btnCloseSceneModal = document.getElementById("btn-close-scene-modal");
@@ -3583,41 +3636,141 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputSceneName = document.getElementById("input-scene-name");
   const sceneIconPicker = document.getElementById("scene-icon-picker");
   const sceneColorPicker = document.getElementById("scene-color-picker");
-  const sceneAcEnable = document.getElementById("scene-ac-enable");
-  const sceneAcOptions = document.getElementById("scene-ac-options");
-  const sceneAcPower = document.getElementById("scene-ac-power");
-  const sceneAcMode = document.getElementById("scene-ac-mode");
-  const sceneTempDisplay = document.getElementById("scene-temp-display");
-  const btnSceneTempMinus = document.getElementById("btn-scene-temp-minus");
-  const btnSceneTempPlus = document.getElementById("btn-scene-temp-plus");
   const sceneRelay1Act = document.getElementById("scene-relay1-act");
   const sceneRelay2Act = document.getElementById("scene-relay2-act");
 
-  let newSceneTemp = 25;
   let selectedSceneIcon = "fa-couch";
   let selectedSceneColor = "#00b06f";
 
-  if (sceneAcEnable) {
-    sceneAcEnable.addEventListener("change", () => {
-      if (sceneAcOptions) sceneAcOptions.style.display = sceneAcEnable.checked ? "block" : "none";
-    });
-  }
+  function renderSceneAcList() {
+    const container = document.getElementById("scene-ac-devices-list");
+    if (!container) return;
 
-  if (btnSceneTempMinus) {
-    btnSceneTempMinus.addEventListener("click", () => {
-      if (newSceneTemp > 16) {
-        newSceneTemp--;
-        if (sceneTempDisplay) sceneTempDisplay.innerText = `${newSceneTemp}°C`;
+    const acs = getAllAvailableAcs();
+    let html = "";
+
+    acs.forEach(ac => {
+      const initTemp = ac.temp && ac.temp >= 16 && ac.temp <= 30 ? ac.temp : 25;
+      const initMode = ac.mode !== undefined ? ac.mode : 1;
+      html += `
+        <div class="scene-device-card scene-ac-card" data-ac-id="${escapeHtml(ac.id)}" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-wind" style="color: #0284c7; font-size: 1.1rem;"></i>
+              <div>
+                <strong style="font-size: 0.85rem; color: #1e293b; display: block;">${escapeHtml(ac.name)}</strong>
+                <span style="font-size: 0.72rem; color: #64748b;">${escapeHtml(ac.brand_name || 'Hunonic IR')} &bull; ID: ${escapeHtml(ac.id)}</span>
+              </div>
+            </div>
+            <label class="modern-toggle-switch">
+              <input type="checkbox" class="scene-ac-enable-toggle" data-ac-id="${escapeHtml(ac.id)}" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="scene-ac-config-body" data-ac-id="${escapeHtml(ac.id)}" style="display: block; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <select class="scene-ac-power-select" data-ac-id="${escapeHtml(ac.id)}" style="flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.8rem; background: #fff;">
+                <option value="1" selected>BẬT Điều hòa</option>
+                <option value="0">TẮT Điều hòa</option>
+              </select>
+              <select class="scene-ac-mode-select" data-ac-id="${escapeHtml(ac.id)}" style="flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.8rem; background: #fff;">
+                <option value="1" ${initMode === 1 ? 'selected' : ''}>Làm mát (Cool)</option>
+                <option value="2" ${initMode === 2 ? 'selected' : ''}>Sưởi ấm (Heat)</option>
+                <option value="3" ${initMode === 3 ? 'selected' : ''}>Hút ẩm (Dry)</option>
+                <option value="4" ${initMode === 4 ? 'selected' : ''}>Quạt gió (Fan)</option>
+                <option value="0" ${initMode === 0 ? 'selected' : ''}>Tự động (Auto)</option>
+              </select>
+            </div>
+            <div class="scene-ac-temp-row" data-ac-id="${escapeHtml(ac.id)}" style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.8rem; color: #475569;">Nhiệt độ cài đặt:</span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button type="button" class="btn-micro-step btn-ac-temp-minus" data-ac-id="${escapeHtml(ac.id)}">-</button>
+                <span class="scene-ac-temp-val" data-ac-id="${escapeHtml(ac.id)}" style="font-size: 0.95rem; font-weight: 700; color: #00b06f; min-width: 40px; text-align: center;">${initTemp}°C</span>
+                <button type="button" class="btn-micro-step btn-ac-temp-plus" data-ac-id="${escapeHtml(ac.id)}">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+
+    // Bắt sự kiện trên từng thẻ điều hòa
+    container.querySelectorAll(".scene-ac-card").forEach(card => {
+      const toggle = card.querySelector(".scene-ac-enable-toggle");
+      const configBody = card.querySelector(".scene-ac-config-body");
+      const powerSelect = card.querySelector(".scene-ac-power-select");
+      const tempRow = card.querySelector(".scene-ac-temp-row");
+      const tempVal = card.querySelector(".scene-ac-temp-val");
+      const btnMinus = card.querySelector(".btn-ac-temp-minus");
+      const btnPlus = card.querySelector(".btn-ac-temp-plus");
+
+      if (toggle && configBody) {
+        toggle.addEventListener("change", () => {
+          configBody.style.display = toggle.checked ? "block" : "none";
+        });
+      }
+
+      if (powerSelect && tempRow) {
+        powerSelect.addEventListener("change", () => {
+          tempRow.style.display = (powerSelect.value === "1") ? "flex" : "none";
+        });
+      }
+
+      if (btnMinus && tempVal) {
+        btnMinus.addEventListener("click", () => {
+          let cur = parseInt(tempVal.innerText) || 25;
+          if (cur > 16) {
+            cur--;
+            tempVal.innerText = `${cur}°C`;
+          }
+        });
+      }
+
+      if (btnPlus && tempVal) {
+        btnPlus.addEventListener("click", () => {
+          let cur = parseInt(tempVal.innerText) || 25;
+          if (cur < 30) {
+            cur++;
+            tempVal.innerText = `${cur}°C`;
+          }
+        });
       }
     });
-  }
-  if (btnSceneTempPlus) {
-    btnSceneTempPlus.addEventListener("click", () => {
-      if (newSceneTemp < 30) {
-        newSceneTemp++;
-        if (sceneTempDisplay) sceneTempDisplay.innerText = `${newSceneTemp}°C`;
-      }
-    });
+
+    // Nút Bật tất cả / Tắt tất cả điều hòa
+    const btnAllOn = document.getElementById("btn-scene-ac-all-on");
+    const btnAllOff = document.getElementById("btn-scene-ac-all-off");
+    if (btnAllOn) {
+      btnAllOn.onclick = () => {
+        container.querySelectorAll(".scene-ac-card").forEach(card => {
+          const toggle = card.querySelector(".scene-ac-enable-toggle");
+          if (toggle) toggle.checked = true;
+          const configBody = card.querySelector(".scene-ac-config-body");
+          if (configBody) configBody.style.display = "block";
+          const pwr = card.querySelector(".scene-ac-power-select");
+          if (pwr) pwr.value = "1";
+          const tempRow = card.querySelector(".scene-ac-temp-row");
+          if (tempRow) tempRow.style.display = "flex";
+        });
+      };
+    }
+    if (btnAllOff) {
+      btnAllOff.onclick = () => {
+        container.querySelectorAll(".scene-ac-card").forEach(card => {
+          const toggle = card.querySelector(".scene-ac-enable-toggle");
+          if (toggle) toggle.checked = true;
+          const configBody = card.querySelector(".scene-ac-config-body");
+          if (configBody) configBody.style.display = "block";
+          const pwr = card.querySelector(".scene-ac-power-select");
+          if (pwr) pwr.value = "0";
+          const tempRow = card.querySelector(".scene-ac-temp-row");
+          if (tempRow) tempRow.style.display = "none";
+        });
+      };
+    }
   }
 
   if (sceneIconPicker) {
@@ -3642,10 +3795,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function openSceneBuilderModal() {
     if (inputSceneName) inputSceneName.value = "";
-    newSceneTemp = 25;
-    if (sceneTempDisplay) sceneTempDisplay.innerText = "25°C";
-    if (sceneAcEnable) sceneAcEnable.checked = true;
-    if (sceneAcOptions) sceneAcOptions.style.display = "block";
+    renderSceneAcList();
     if (modalSceneBuilder) modalSceneBuilder.classList.remove("hidden");
   }
 
@@ -3668,17 +3818,40 @@ document.addEventListener("DOMContentLoaded", () => {
       const actions = {};
       let subParts = [];
 
-      if (sceneAcEnable && sceneAcEnable.checked) {
-        const pwr = Number(sceneAcPower ? sceneAcPower.value : 1);
-        actions.ac_power = pwr;
-        if (pwr === 1) {
-          actions.ac_temp = newSceneTemp;
-          actions.ac_mode = Number(sceneAcMode ? sceneAcMode.value : 1);
-          actions.ac_fan = 0;
-          subParts.push(`AC ${newSceneTemp}°C`);
-        } else {
-          subParts.push("Tắt AC");
+      // Thu thập trạng thái của từng điều hòa trong danh sách
+      const acDevicesActions = [];
+      const acCards = document.querySelectorAll("#scene-ac-devices-list .scene-ac-card");
+      acCards.forEach(card => {
+        const acId = card.getAttribute("data-ac-id");
+        const enableToggle = card.querySelector(".scene-ac-enable-toggle");
+        if (enableToggle && enableToggle.checked) {
+          const pwr = Number(card.querySelector(".scene-ac-power-select").value);
+          const mode = Number(card.querySelector(".scene-ac-mode-select").value);
+          const tempText = card.querySelector(".scene-ac-temp-val").innerText;
+          const temp = parseInt(tempText) || 25;
+          const acName = card.querySelector("strong") ? card.querySelector("strong").innerText : `AC ${acId}`;
+          acDevicesActions.push({
+            device_id: acId,
+            name: acName,
+            power: pwr,
+            mode,
+            temp,
+            fan: 0
+          });
+          const shortName = acName.replace("Điều hòa ", "");
+          if (pwr === 1) {
+            subParts.push(`${shortName} ${temp}°C`);
+          } else {
+            subParts.push(`Tắt ${shortName}`);
+          }
         }
+      });
+
+      if (acDevicesActions.length > 0) {
+        actions.ac_devices = acDevicesActions;
+        actions.ac_power = acDevicesActions[0].power;
+        actions.ac_temp = acDevicesActions[0].temp;
+        actions.ac_mode = acDevicesActions[0].mode;
       }
 
       const r1 = Number(sceneRelay1Act ? sceneRelay1Act.value : -1);
@@ -4166,6 +4339,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const gwRes = await callApi("/api/gateway/status");
     if (gwRes && gwRes.success && gwRes.data) {
       const d = gwRes.data;
+      window.lastGatewayStatus = d;
       const prevOnline = isGatewayOnline;
 
       // Trạng thái trực tuyến được Backend tính toán chuẩn xác từ MQTT LWT và Watchdog 35s
@@ -4675,12 +4849,28 @@ document.addEventListener("DOMContentLoaded", () => {
           if (acts.ac_mode !== undefined) acState.mode = acts.ac_mode;
           if (acts.ac_fan !== undefined) acState.fan = acts.ac_fan;
           updateAcModalUI();
-          apiRunner("/api/hvac/control", "POST", {
-            power: acState.power,
-            temp: acState.temp,
-            mode: acState.mode,
-            fan: acState.fan
-          }).catch(err => console.error("Auto AC err:", err));
+
+          const targetAc = acts.ac_target || "all";
+          if (targetAc === "all") {
+            const allAcs = getAllAvailableAcs();
+            allAcs.forEach(dev => {
+              apiRunner("/api/hvac/control", "POST", {
+                device_id: dev.id,
+                power: acState.power,
+                temp: acState.temp,
+                mode: acState.mode,
+                fan: acState.fan
+              }).catch(err => console.error("Auto AC err:", err));
+            });
+          } else {
+            apiRunner("/api/hvac/control", "POST", {
+              device_id: targetAc,
+              power: acState.power,
+              temp: acState.temp,
+              mode: acState.mode,
+              fan: acState.fan
+            }).catch(err => console.error("Auto AC err:", err));
+          }
         }
 
         if (acts.relay1 !== undefined && acts.relay1 >= 0) {
@@ -4994,6 +5184,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (inputAutoName) inputAutoName.value = "";
     if (autoActAcPower) autoActAcPower.value = "0";
     if (autoActAcDetails) autoActAcDetails.style.display = "none";
+
+    const targetSelect = document.getElementById("auto-act-ac-target");
+    if (targetSelect) {
+      const acs = getAllAvailableAcs();
+      let optHtml = `<option value="all">Tất cả điều hòa trong nhà (Toàn bộ)</option>`;
+      acs.forEach(ac => {
+        optHtml += `<option value="${escapeHtml(ac.id)}">${escapeHtml(ac.name)} (${escapeHtml(ac.brand_name || 'Hunonic IR')})</option>`;
+      });
+      targetSelect.innerHTML = optHtml;
+    }
+
     if (modalAutomationBuilder) modalAutomationBuilder.classList.remove("hidden");
   }
 
@@ -5055,16 +5256,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const actions = {};
       const actParts = [];
+      const acTargetSelect = document.getElementById("auto-act-ac-target");
+      const acTargetVal = acTargetSelect ? acTargetSelect.value : "all";
+      const acTargetText = (acTargetSelect && acTargetSelect.options[acTargetSelect.selectedIndex]) ? acTargetSelect.options[acTargetSelect.selectedIndex].text : "Tất cả điều hòa";
+      const acLabel = acTargetVal === "all" ? "Tất cả AC" : acTargetText.replace(/\s*\(.*\)/, "");
+
       const acPwr = Number(autoActAcPower ? autoActAcPower.value : -1);
       if (acPwr !== -1) {
         actions.ac_power = acPwr;
+        actions.ac_target = acTargetVal;
         if (acPwr === 1) {
           actions.ac_temp = Number(autoActAcTemp ? autoActAcTemp.value : 25);
           actions.ac_mode = Number(autoActAcMode ? autoActAcMode.value : 1);
           actions.ac_fan = 0;
-          actParts.push(`Bật Điều hòa ${actions.ac_temp}°C`);
+          actParts.push(`Bật ${acLabel} ${actions.ac_temp}°C`);
         } else {
-          actParts.push("Tắt Điều hòa");
+          actParts.push(`Tắt ${acLabel}`);
         }
       }
 
