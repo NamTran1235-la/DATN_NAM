@@ -136,7 +136,7 @@ def on_message(client, userdata, msg):
                         latest_gateway_status["ota"]["status"] = "success"
                         latest_gateway_status["ota"]["percent"] = 100
                         latest_gateway_status["ota"]["message"] = f"Thiết bị đã kích hoạt firmware v{new_fw} thành công!"
-                        logger.info(f"🎉 [OTA AUTO SUCCESS] Thiết bị xác nhận version mới v{new_fw}!")
+                        logger.info(f"[OTA AUTO SUCCESS] Thiết bị xác nhận version mới v{new_fw}!")
 
                 # A heartbeat also refreshes the first real AC, even if device_list
                 # was published before this backend subscribed.
@@ -284,7 +284,7 @@ def on_message(client, userdata, msg):
                     latest_gateway_status["ac_fan"] = dev_entry["fan"]
                     latest_gateway_status["ac_brand"] = dev_entry["brand"]
 
-                logger.info(f"✅ [AC STATE SYNC] Điều hòa [{aid}] '{dev_entry.get('name')}': Power={dev_entry.get('power')}, Temp={dev_entry.get('temp')}°C, Mode={dev_entry.get('mode')}, Fan={dev_entry.get('fan')}")
+                logger.info(f"[AC STATE SYNC] Điều hòa [{aid}] '{dev_entry.get('name')}': Power={dev_entry.get('power')}, Temp={dev_entry.get('temp')}°C, Mode={dev_entry.get('mode')}, Fan={dev_entry.get('fan')}")
 
             elif evt in ("ota_progress", "ota_status"):
                 latest_gateway_status["online"] = True
@@ -299,7 +299,7 @@ def on_message(client, userdata, msg):
                     "message": data.get("message", ""),
                     "timestamp": int(now.timestamp())
                 })
-                logger.info(f"📡 [OTA PROGRESS] {data.get('target', 'esp32s3_gate')} -> {data.get('percent')}% ({data.get('status')})")
+                logger.info(f"[OTA PROGRESS] {data.get('target', 'esp32s3_gate')} -> {data.get('percent')}% ({data.get('status')})")
 
         # 2. Nhận dữ liệu cảm biến Node ESP-NOW
         elif topic == settings.TOPIC_GATE_TELEMETRY or "node_id" in data:
@@ -367,7 +367,7 @@ def start_mqtt_client():
     """Khởi động MQTT Client kết nối HiveMQ Cloud TLS trong background thread"""
     global mqtt_client
     parsed = urlparse(settings.MQTT_BROKER_URI)
-    host = parsed.hostname or "20476a36ce36478d90de6d5676587638.s1.eu.hivemq.cloud"
+    host = parsed.hostname or (parsed.netloc.split(":")[0] if parsed.netloc else "localhost")
     port = parsed.port or 8883
 
     mqtt_client = mqtt.Client(

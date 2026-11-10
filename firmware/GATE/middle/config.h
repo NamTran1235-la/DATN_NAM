@@ -20,10 +20,18 @@
 #define DEFAULT_WIFI_SSID "QuangHa"
 #define DEFAULT_WIFI_PASS "66668888"
 
+#ifndef MQTT_BROKER_URI
 #define MQTT_BROKER_URI                                                        \
-  "mqtts://20476a36ce36478d90de6d5676587638.s1.eu.hivemq.cloud:8883"
-#define MQTT_USERNAME "quanghaictu"
-#define MQTT_PASSWORD "Zdinhquangha1234"
+  "mqtts://your-cluster.s1.eu.hivemq.cloud:8883"
+#endif
+
+#ifndef MQTT_USERNAME
+#define MQTT_USERNAME "your_mqtt_username"
+#endif
+
+#ifndef MQTT_PASSWORD
+#define MQTT_PASSWORD "your_mqtt_password"
+#endif
 
 #define TOPIC_GATE_COMMAND "gate/command"
 #define TOPIC_GATE_STATUS "gate/status"

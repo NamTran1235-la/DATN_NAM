@@ -17,3 +17,9 @@ managed_components/
 # Secrets & Credentials (NEVER commit to Git)
 secrets.h
 **/secrets.h
+.env
+*.env
+**/.env
+*.db
+*.sqlite
+*.sqlite3

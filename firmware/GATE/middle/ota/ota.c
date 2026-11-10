@@ -85,7 +85,7 @@ esp_err_t ota_parse_json(const char *json_str, ota_config_t *out_cfg) {
 
 static void ota_task(void *pvParameter) {
   const char *target = s_current_ota_cfg.target[0] ? s_current_ota_cfg.target : "esp32s3_gate";
-  ESP_LOGI(TAG, "🚀 [OTA GATEWAY] Bat dau tai va nap cho [%s] tu: %s", target, s_current_ota_cfg.url);
+  ESP_LOGI(TAG, "[OTA GATEWAY] Bat dau tai va nap cho [%s] tu: %s", target, s_current_ota_cfg.url);
 
   esp_http_client_config_t http_config = {
       .url = s_current_ota_cfg.url,
@@ -101,7 +101,7 @@ static void ota_task(void *pvParameter) {
   esp_https_ota_handle_t https_ota_handle = NULL;
   esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "❌ [OTA GATEWAY] Khoi tao OTA that bai: %s (0x%x)",
+    ESP_LOGE(TAG, "[OTA GATEWAY] Khoi tao OTA that bai: %s (0x%x)",
              esp_err_to_name(err), err);
     char err_buf[256];
     snprintf(err_buf, sizeof(err_buf),
@@ -137,7 +137,7 @@ static void ota_task(void *pvParameter) {
     // Bắn tiến độ mỗi 5% một lần (giống cơ chế Pump)
     if (percent != last_reported_percent && (percent % 5 == 0 || last_reported_percent == -1)) {
       last_reported_percent = percent;
-      ESP_LOGI(TAG, "📡 [OTA S3 PROGRESS] %d%% (%d/%d bytes)", percent, read_len, image_size);
+      ESP_LOGI(TAG, "[OTA S3 PROGRESS] %d%% (%d/%d bytes)", percent, read_len, image_size);
       char prog_buf[256];
       snprintf(prog_buf, sizeof(prog_buf),
                "{\"event\":\"ota_progress\",\"target\":\"%s\","
@@ -152,14 +152,14 @@ static void ota_task(void *pvParameter) {
   if (esp_https_ota_is_complete_data_received(https_ota_handle)) {
     esp_err_t finish_err = esp_https_ota_finish(https_ota_handle);
     if (finish_err == ESP_OK) {
-      ESP_LOGI(TAG, "🎉 [OTA GATEWAY] CAP NHAT THANH CONG 100%%!");
+      ESP_LOGI(TAG, "[OTA GATEWAY] CAP NHAT THANH CONG 100%%!");
       if (strlen(s_current_ota_cfg.version) > 0) {
         nvs_handle_t nvs;
         if (nvs_open("gate_cfg", NVS_READWRITE, &nvs) == ESP_OK) {
           nvs_set_str(nvs, "fw_pending", s_current_ota_cfg.version);
           nvs_commit(nvs);
           nvs_close(nvs);
-          ESP_LOGI(TAG, "💾 Da luu fw_pending: [%s]", s_current_ota_cfg.version);
+          ESP_LOGI(TAG, "Da luu fw_pending: [%s]", s_current_ota_cfg.version);
         }
       }
       char stat_buf[256];
@@ -175,7 +175,7 @@ static void ota_task(void *pvParameter) {
       vTaskDelay(pdMS_TO_TICKS(2000));
       esp_restart();
     } else {
-      ESP_LOGE(TAG, "❌ [OTA GATEWAY] Finish that bai: %s (0x%x)",
+      ESP_LOGE(TAG, "[OTA GATEWAY] Finish that bai: %s (0x%x)",
                esp_err_to_name(finish_err), finish_err);
       char err_buf[256];
       snprintf(err_buf, sizeof(err_buf),
@@ -189,7 +189,7 @@ static void ota_task(void *pvParameter) {
     }
   } else {
     esp_https_ota_abort(https_ota_handle);
-    ESP_LOGE(TAG, "❌ [OTA GATEWAY] Nap that bai giua chung: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG, "[OTA GATEWAY] Nap that bai giua chung: %s", esp_err_to_name(err));
     char err_buf[256];
     snprintf(err_buf, sizeof(err_buf),
              "{\"event\":\"ota_progress\",\"target\":\"%s\","

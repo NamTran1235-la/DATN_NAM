@@ -364,7 +364,7 @@ def trigger_ota(
     latest_gateway_status["ota"]["message"] = "Đang kích hoạt nạp OTA..."
     latest_gateway_status["ota"]["timestamp"] = int(time.time())
 
-    print(f"🚀 [Gateway OTA] Đã bắn lệnh OTA [{topic}]: {payload_str}")
+    print(f"[Gateway OTA] Đã bắn lệnh OTA [{topic}]: {payload_str}")
 
     audit = ControlAudit(
         username=current_user["username"],

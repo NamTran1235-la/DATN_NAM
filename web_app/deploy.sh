@@ -5,35 +5,35 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
 
 echo "=========================================================="
-echo "🚀 1. KIỂM TRA MÔI TRƯỜNG DOCKER..."
+echo "[1] KIEM TRA MOI TRUONG DOCKER..."
 echo "=========================================================="
 if ! command -v docker &> /dev/null; then
-    echo "❌ Lỗi: Máy chủ chưa cài đặt Docker!"
+    echo "[!] Loi: May chu chua cai dat Docker!"
     exit 1
 fi
 
 echo "=========================================================="
-echo "🔨 2. BIÊN DỊCH CÁC CONTAINER (BACKEND + FRONTEND)..."
+echo "[2] BIEN DICH CAC CONTAINER (BACKEND + FRONTEND)..."
 echo "=========================================================="
 docker compose build
 
 echo "=========================================================="
-echo "🔄 3. KHỞI CHẠY HỆ THỐNG TRÊN CÁC CỔNG MỚI..."
+echo "[3] KHOI CHAY HE THONG TREN CAC CONG MOI..."
 echo "=========================================================="
 docker compose up -d
 
 echo ""
 echo "=========================================================="
-echo "✅ TRIỂN KHAI HOÀN TẤT THÀNH CÔNG!"
+echo "[+] TRIEN KHAI HOAN TAT THANH CONG!"
 echo "=========================================================="
-echo "🌐 Giao diện Web Đăng Nhập : http://localhost:8080"
-echo "📊 Bảng Điều Khiển Dashboard: http://localhost:8080/index.html"
-echo "📚 Tài Liệu API Swagger UI : http://localhost:8080/docs"
-echo "📖 Tài Liệu API ReDoc      : http://localhost:8080/redoc"
-echo "🔌 Cổng Backend API Trực tiếp: http://localhost:8001/api/"
-echo "🗄️ Cổng PostgreSQL Riêng   : localhost:5433"
+echo "Giao dien Web Dang Nhap : http://localhost:8080"
+echo "Bang Dieu Khien Dashboard: http://localhost:8080/index.html"
+echo "Tai Lieu API Swagger UI : http://localhost:8080/docs"
+echo "Tai Lieu API ReDoc      : http://localhost:8080/redoc"
+echo "Cong Backend API Truc tiep: http://localhost:8001/api/"
+echo "Cong PostgreSQL Rieng   : localhost:5433"
 echo "----------------------------------------------------------"
-echo "👤 Tài khoản đăng nhập mặc định: admin / admin123"
+echo "Tai khoan dang nhap mac dinh: admin / admin123"
 echo "=========================================================="
 echo ""
 echo "Đang theo dõi log của Backend API (Bấm Ctrl+C để thoát log):"

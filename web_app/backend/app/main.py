@@ -20,7 +20,7 @@ logger = logging.getLogger("MAIN_APP")
 async def lifespan(app: FastAPI):
     # Khởi động ứng dụng
     logger.info("=" * 60)
-    logger.info("  🚀 KHỞI ĐỘNG HỆ THỐNG BACKEND GATEWAY & HVAC (DATN NAM)  ")
+    logger.info("  KHOI DONG HE THONG BACKEND GATEWAY & HVAC (DATN NAM)  ")
     logger.info("=" * 60)
     init_db()
     start_mqtt_client()

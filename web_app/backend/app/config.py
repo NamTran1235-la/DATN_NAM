@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 ngày
     
     # Cấu hình HiveMQ Cloud (Dùng chung broker với ESP32-S3)
-    MQTT_BROKER_URI: str = "mqtts://20476a36ce36478d90de6d5676587638.s1.eu.hivemq.cloud:8883"
-    MQTT_USERNAME: str = "quanghaictu"
-    MQTT_PASSWORD: str = "Zdinhquangha1234"
+    MQTT_BROKER_URI: str = "mqtts://your-cluster.s1.eu.hivemq.cloud:8883"
+    MQTT_USERNAME: str = "your_mqtt_username"
+    MQTT_PASSWORD: str = "your_mqtt_password"
     
     # Topics MQTT của Gateway
     TOPIC_GATE_STATUS: str = "gate/status"

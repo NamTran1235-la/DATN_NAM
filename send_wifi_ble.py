@@ -127,7 +127,7 @@ def send_wifi(ssid, password):
     time.sleep(0.3)
     print("[+] Ghi Password thành công!")
 
-    print("\n🎉 HOÀN THÀNH: Đã nạp thông tin Wi-Fi vào Gateway ESP32-S3 qua BLE thành công!")
+    print("\nHOÀN THÀNH: Đã nạp thông tin Wi-Fi vào Gateway ESP32-S3 qua BLE thành công!")
     print("   Gateway đang bắt đầu kết nối Wi-Fi & MQTT Cloud HiveMQ.")
     return True
 
