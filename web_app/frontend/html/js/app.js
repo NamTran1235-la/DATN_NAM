@@ -147,6 +147,10 @@ document.addEventListener("DOMContentLoaded", () => {
     isOnline: false
   };
 
+  window.acState = acState;
+  window.relayStates = relayStates;
+  window.sensorData = sensorData;
+
   let isGatewayOnline = false;
   let gwMetrics = {
     uptime_sec: 0,
@@ -893,6 +897,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return null;
     }
   }
+  window.callApi = callApi;
 
   // ── Định dạng Uptime ───────────────────────────────────────────────────────
   function formatUptime(seconds) {
@@ -4537,6 +4542,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── LIVE RUNTIME ENGINE CHO TỰ ĐỘNG HÓA (ECA RULES ENGINE) ────────────────
   const automationCooldowns = {};
+  window.automationCooldowns = automationCooldowns;
   let consecutiveAbsentCycles = 0;
   let consecutivePresentCycles = 0;
   let lastTempAlertTime = 0;
