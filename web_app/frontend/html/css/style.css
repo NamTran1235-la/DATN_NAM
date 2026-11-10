@@ -2362,6 +2362,62 @@ body {
   font-size: 12px;
 }
 
+.sensor-metric-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 4px;
+}
+
+.sensor-metric-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.sensor-metric-chip i {
+  font-size: 0.88rem;
+}
+
+.sensor-metric-chip.offline {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sensor-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 3px;
+}
+
+.sensor-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.sensor-status-chip i {
+  font-size: 0.78rem;
+}
+
+.sensor-status-chip.online {
+  color: #059669;
+}
+
+.sensor-status-chip.offline {
+  color: #ef4444;
+}
+
 .hunonic-card-bottom {
   margin-top: 14px;
 }

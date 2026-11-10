@@ -2546,6 +2546,55 @@ document.addEventListener("DOMContentLoaded", () => {
     return `<span class="sensor-batt-pill" title="Mức pin Node: ${bat.voltageStr} (${bat.pct}%)" style="color:${bat.color};border-color:${bat.color}35;"><i class="fa-solid ${bat.icon}"></i> <span>${bat.voltageStr}</span></span>`;
   }
 
+  function getSensorCardDetailHtml(dev, isOnline) {
+    if (!isOnline) {
+      return `
+        <div class="sensor-metric-row">
+          <span class="sensor-metric-chip offline"><i class="fa-solid fa-satellite-dish"></i> ESP-NOW 2.4GHz</span>
+        </div>
+        <div class="sensor-status-row">
+          <span class="sensor-status-chip offline"><i class="fa-solid fa-circle-xmark"></i> Ngoại tuyến</span>
+        </div>
+      `;
+    }
+
+    const tempVal = (sensorData.hasData && sensorData.temp > 0) ? `${sensorData.temp.toFixed(1)}°C` : "--°C";
+    const isPressure = sensorData.hum > 120;
+    const val2Icon = isPressure ? "fa-gauge-high" : "fa-droplet";
+    const val2Color = isPressure ? "#0284c7" : "#0ea5e9";
+    const val2Unit = isPressure ? "hPa" : "%";
+    const val2Val = (sensorData.hasData && sensorData.hum > 0) ? `${sensorData.hum.toFixed(1)} ${val2Unit}` : `-- ${val2Unit}`;
+
+    const known = sensorData.hasData && [true, false, 0, 1, "0", "1"].includes(sensorData.presence);
+    const occupied = known && (sensorData.presence === true || Number(sensorData.presence) === 1);
+    const presIcon = occupied ? "fa-person-walking" : "fa-house-user";
+    const presColor = occupied ? "#059669" : "#64748b";
+    const presText = known ? (occupied ? "Có người" : "Trống") : "Chờ dữ liệu";
+
+    return `
+      <div class="sensor-metric-row">
+        <span class="sensor-metric-chip" title="Nhiệt độ phòng">
+          <i class="fa-solid fa-temperature-half" style="color: #ef4444;"></i>
+          <span>${tempVal}</span>
+        </span>
+        <span class="sensor-metric-chip" title="${isPressure ? 'Áp suất khí quyển' : 'Độ ẩm không khí'}">
+          <i class="fa-solid ${val2Icon}" style="color: ${val2Color};"></i>
+          <span>${val2Val}</span>
+        </span>
+      </div>
+      <div class="sensor-status-row">
+        <span class="sensor-status-chip online" title="Trạng thái kết nối">
+          <i class="fa-solid fa-circle-check" style="color: #059669;"></i>
+          <span>Trực tuyến</span>
+        </span>
+        <span class="sensor-status-chip presence" title="Hiện diện radar" style="color: ${presColor}; font-weight: 600;">
+          <i class="fa-solid ${presIcon}" style="color: ${presColor};"></i>
+          <span>${presText}</span>
+        </span>
+      </div>
+    `;
+  }
+
   // ── TRẠNG THÁI SUB-VIEW HIỆN TẠI (GIỐNG HUNONIC) ─────────────────────────────
   let currentHubView = null; // null: Home, hoặc { type: 'gateway' | 'ir_hub', dev: hubDev, parent: 'home' | 'gateway' }
 
@@ -2734,26 +2783,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (dev.type === "sensor") {
           iconSvg = getSensorHexSvg();
-          if (sensorData.hasData && sensorData.temp > 0) {
-            const val2Unit = sensorData.hum > 120 ? "hPa" : "%";
-            subText = `${sensorData.temp.toFixed(1)}°C &bull; ${sensorData.hum.toFixed(1)} ${val2Unit}`;
-          } else {
-            subText = "ESP-NOW 2.4GHz";
-          }
+          subText = getSensorCardDetailHtml(dev, isOnline);
         } else if (dev.type === "socket") {
           const isDevOn = isOnline && dev.state === 1;
           iconSvg = getRelayHexSvg(isDevOn);
           subText = isDevOn ? "Đang bật" : "Đang tắt";
         }
-
-        if (dev.type === "sensor") {
-          const bat = getSensorBatteryInfo(dev);
-          const batLabel = isOnline ? ` &bull; <i class="fa-solid ${bat.icon}" style="color:${bat.color};"></i> ${bat.voltageStr}` : '';
-          subText += `<span style="display:block;">${isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}${batLabel}</span>`;
-          subText += getNodePresenceHtml(isOnline);
-        }
-
-        if (dev.type === "sensor" && !isOnline) subText = "Chờ dữ liệu mới";
 
         extraCardsHtml += `
           <div class="hunonic-card subview-gw-child" data-id="${dev.id}" data-gw-action="open_custom_dev" title="${escapeHtml(dev.name)}">
@@ -2768,7 +2803,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
             <div class="hunonic-card-bottom" style="pointer-events: none;">
               <h4 class="hunonic-card-title">${escapeHtml(dev.name)}</h4>
-              <p class="hunonic-card-sub ${isOnline ? 'on' : ''}">${subText}</p>
+              <div class="hunonic-card-sub ${isOnline ? 'on' : ''}">${subText}</div>
             </div>
           </div>
         `;
@@ -2992,24 +3027,8 @@ document.addEventListener("DOMContentLoaded", () => {
         subText = isOn ? "Đang bật" : "Đang tắt";
       } else if (dev.type === "sensor") {
         iconSvg = getSensorHexSvg();
-        if (!isOnline) {
-          subText = `<span style="color:#ef4444;font-weight:600;"><i class="fa-solid fa-power-off"></i> Ngoại tuyến</span>`;
-        } else if (sensorData.temp > 0) {
-          const val2Unit = sensorData.hum > 120 ? "hPa" : "%";
-          subText = `${sensorData.temp.toFixed(1)}°C &bull; ${sensorData.hum.toFixed(1)} ${val2Unit}`;
-        } else {
-          subText = "ESP-NOW 2.4GHz";
-        }
+        subText = getSensorCardDetailHtml(dev, isOnline);
       }
-
-      if (dev.type === "sensor") {
-        const bat = getSensorBatteryInfo(dev);
-        const batLabel = isOnline ? ` &bull; <i class="fa-solid ${bat.icon}" style="color:${bat.color};"></i> ${bat.voltageStr}` : '';
-        subText += `<span style="display:block;">${isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}${batLabel}</span>`;
-        subText += getNodePresenceHtml(isOnline);
-      }
-
-      if (dev.type === "sensor" && !isOnline) subText = "Chờ dữ liệu mới";
 
       customCardsHtml += `
         <div class="hunonic-card" data-id="${dev.id}" title="Bấm vào để xem chi tiết">
@@ -3024,7 +3043,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div class="hunonic-card-bottom">
             <h4 class="hunonic-card-title">${escapeHtml(dev.name)}</h4>
-            <p class="hunonic-card-sub ${isOn ? 'on' : ''}">${subText}</p>
+            <div class="hunonic-card-sub ${isOn || isOnline ? 'on' : ''}">${subText}</div>
           </div>
         </div>
       `;
