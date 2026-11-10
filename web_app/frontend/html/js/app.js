@@ -2615,7 +2615,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const subClass = isChildOn ? "on" : "";
 
         html += `
-          <div class="hunonic-card subview-ac-card ${isHubOnline ? '' : 'is-offline'}" onclick="${isHubOnline ? `window.handleAcCardClick('${child.id}')` : 'return false'}" aria-disabled="${!isHubOnline}" data-child-id="${child.id}" data-hub-id="${dev.id || 'dev_ir_hub_hunonic'}" title="${!isHubOnline ? 'Trạm phát IR chưa cắm điện' : 'Bấm vào để mở điều khiển điều hòa'}">
+          <div class="hunonic-card subview-ac-card ${isHubOnline ? '' : 'is-offline'}" onclick="${isHubOnline ? `window.handleAcCardClick('${child.id}')` : 'return false'}" aria-disabled="${!isHubOnline}" data-child-id="${child.id}" data-hub-id="${dev.id || 'dev_ir_hub_hunonic'}" title="${!isHubOnline ? 'Trạm phát IR chưa cắm điện' : 'Bấm vào để mở điều khiển (Nhấn giữ để mở Cài đặt nâng cao)'}" style="position: relative;">
+            <button type="button" class="btn-ac-card-direct-gear" data-ac-id="${child.id}" title="Cài đặt nhiệt độ & Hẹn giờ" onclick="event.stopPropagation(); window.openAcLeftDrawer && window.openAcLeftDrawer({ id: '${child.id}', name: '${escapeHtml(child.name)}', brand_name: '${escapeHtml(child.brand_name || '')}' });">
+              <i class="fa-solid fa-sliders"></i>
+            </button>
             <div class="hunonic-card-top" style="pointer-events: none;">
               <div class="ac-indoor-svg">
                 ${getAcUnitSvg(isHubOnline, isChildOn)}
@@ -7266,37 +7269,54 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   setInterval(checkActiveAcTimers, 5000);
 
-  // ── CONTROLLER GIỮ 5 GIÂY VÀO ITEM ĐIỀU HÒA ĐỂ MỞ NAV TRÁI ────────────────
+  // ── CONTROLLER GIỮ CHUỘT / CHẠM VÀO ITEM ĐIỀU HÒA ĐỂ MỞ NAV CÀI ĐẶT ──────
   let globalHoldTimer = null;
   let globalHoldBar = null;
+  let globalHoldBadge = null;
   let globalHoldTriggered = false;
 
   function initGlobalAcLongPress() {
     function startHold(e) {
-      const card = e.target.closest(".subview-ac-card, .scene-ac-card, [data-child-id]");
+      const card = e.target.closest(".subview-ac-card, .scene-ac-card, [data-child-id], #card-ir-hub-master");
       if (!card) return;
       if (e.button && e.button !== 0) return;
 
-      const acId = card.getAttribute("data-child-id") || card.getAttribute("data-ac-id");
+      let acId = card.getAttribute("data-child-id") || card.getAttribute("data-ac-id");
+      if (!acId && card.id === "card-ir-hub-master") {
+        const allAcs = getAllAvailableAcs();
+        if (allAcs && allAcs.length > 0) acId = allAcs[0].id;
+      }
       if (!acId) return;
 
       globalHoldTriggered = false;
 
-      card.querySelectorAll(".ac-hold-progress-bar").forEach(b => b.remove());
+      // Xóa các thanh tiến trình / badge cũ nếu có
+      card.querySelectorAll(".ac-hold-progress-bar, .ac-hold-floating-badge").forEach(b => b.remove());
+
       globalHoldBar = document.createElement("div");
       globalHoldBar.className = "ac-hold-progress-bar";
       card.style.position = "relative";
       card.appendChild(globalHoldBar);
 
+      globalHoldBadge = document.createElement("div");
+      globalHoldBadge.className = "ac-hold-floating-badge";
+      globalHoldBadge.innerHTML = '<i class="fa-solid fa-hourglass-half fa-spin"></i> Giữ mở Cài đặt...';
+      card.appendChild(globalHoldBadge);
+
       setTimeout(() => {
         if (globalHoldBar) globalHoldBar.style.width = "100%";
       }, 20);
 
+      // Nhấn giữ 2.5s sẽ kích hoạt mở thanh điều hướng cài đặt
       globalHoldTimer = setTimeout(() => {
         globalHoldTriggered = true;
         if (globalHoldBar) {
           globalHoldBar.remove();
           globalHoldBar = null;
+        }
+        if (globalHoldBadge) {
+          globalHoldBadge.remove();
+          globalHoldBadge = null;
         }
 
         const allAcs = getAllAvailableAcs();
@@ -7306,7 +7326,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         openAcLeftDrawer(acObj);
         showToast(`Đã mở Cài đặt nâng cao: [${acObj.name}]`, "info");
-      }, 5000);
+      }, 2500);
     }
 
     function cancelHold() {
@@ -7317,6 +7337,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (globalHoldBar) {
         globalHoldBar.remove();
         globalHoldBar = null;
+      }
+      if (globalHoldBadge) {
+        globalHoldBadge.remove();
+        globalHoldBadge = null;
       }
     }
 
@@ -7338,6 +7362,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }, true);
   }
   initGlobalAcLongPress();
+
+  const btnOpenAcAdvFromDrawer = document.getElementById("btn-open-ac-adv-from-drawer");
+  if (btnOpenAcAdvFromDrawer) {
+    btnOpenAcAdvFromDrawer.onclick = () => {
+      const allAcs = getAllAvailableAcs();
+      const dev = currentActiveIrChild || (allAcs && allAcs[0]);
+      if (dev && openAcLeftDrawer) {
+        openAcLeftDrawer(dev);
+      }
+    };
+  }
 
   window.openAcLeftDrawer = openAcLeftDrawer;
   window.closeAcLeftDrawer = closeAcLeftDrawer;

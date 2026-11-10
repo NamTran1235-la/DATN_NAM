@@ -6931,12 +6931,12 @@ body {
 .ac-left-drawer {
   position: fixed;
   top: 0;
-  left: 0;
+  right: 0;
   bottom: 0;
-  width: 410px;
-  max-width: 90vw;
+  width: 420px;
+  max-width: 92vw;
   background: #ffffff;
-  box-shadow: 12px 0 50px rgba(0, 0, 0, 0.25);
+  box-shadow: -12px 0 50px rgba(0, 0, 0, 0.25);
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -6945,7 +6945,7 @@ body {
 }
 
 .ac-left-drawer.hidden {
-  transform: translateX(-105%);
+  transform: translateX(105%);
   pointer-events: none;
 }
 
@@ -7164,13 +7164,68 @@ body {
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 4px;
+  height: 5px;
   background: linear-gradient(90deg, #00b06f, #0284c7);
   width: 0%;
   border-radius: 0 0 16px 16px;
-  transition: width 5s linear;
+  transition: width 2.5s linear;
   pointer-events: none;
-  z-index: 10;
+  z-index: 100;
+}
+
+/* Floating hold badge */
+.ac-hold-floating-badge {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 101;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: badgePulse 0.8s infinite alternate;
+}
+
+@keyframes badgePulse {
+  from { transform: translateX(-50%) scale(0.96); }
+  to { transform: translateX(-50%) scale(1.04); }
+}
+
+/* Direct settings icon button on AC cards */
+.btn-ac-card-direct-gear {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.92);
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.btn-ac-card-direct-gear:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  transform: scale(1.1);
 }
 
 
