@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="css/style.css?v=87">
+  <link rel="stylesheet" href="css/style.css?v=88">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -771,6 +771,72 @@
           <!-- Notification Cards List Container -->
           <div class="notif-cards-list" id="notif-cards-list">
             <!-- Dynamic notifications injected by app.js -->
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SUB-VIEW: QUẢN LÝ PHÒNG (ROOM MANAGEMENT)                        -->
+        <!-- ================================================================ -->
+        <div id="view-room-mgmt" class="hunonic-subview view-room-mgmt" style="display: none;">
+          <!-- Top Header Bar -->
+          <div class="subview-header-bar">
+            <div class="subview-header-left">
+              <button type="button" class="btn-subview-back" id="btn-rooms-back" title="Quay lại Trang chủ">
+                <i class="fa-solid fa-arrow-left"></i>
+              </button>
+              <div class="subview-title-group">
+                <span id="rooms-header-icon-box" style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(16, 185, 129, 0.12); color: #10b981; font-size: 1.15rem;">
+                  <i class="fa-solid fa-shapes"></i>
+                </span>
+                <div>
+                  <h3 class="subview-title">Quản Lý Phòng</h3>
+                  <div style="font-size: 0.78rem; color: #64748b; font-weight: 500;">Phân bổ không gian, giám sát thiết bị và điều khiển theo từng khu vực</div>
+                </div>
+              </div>
+            </div>
+            <div class="subview-header-right">
+              <button type="button" class="btn-subview-action" id="btn-open-create-room" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; box-shadow: 0 4px 12px rgba(16,185,129,0.25); display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 8px; font-weight: 600; font-size: 0.82rem; cursor: pointer;">
+                <i class="fa-solid fa-plus"></i> <span>Thêm Phòng Mới</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Room Stats Bar -->
+          <div class="room-stats-grid">
+            <div class="room-stat-card">
+              <div class="stat-icon-wrap" style="background: #ecfdf5; color: #059669;">
+                <i class="fa-solid fa-door-open"></i>
+              </div>
+              <div>
+                <span class="stat-val" id="stat-total-rooms">04</span>
+                <span class="stat-lbl">Tổng số phòng</span>
+              </div>
+            </div>
+
+            <div class="room-stat-card">
+              <div class="stat-icon-wrap" style="background: #eff6ff; color: #2563eb;">
+                <i class="fa-solid fa-microchip"></i>
+              </div>
+              <div>
+                <span class="stat-val" id="stat-total-room-devices">0</span>
+                <span class="stat-lbl">Thiết bị đã gán</span>
+              </div>
+            </div>
+
+            <div class="room-stat-card">
+              <div class="stat-icon-wrap" style="background: #fef3c7; color: #d97706;">
+                <i class="fa-solid fa-house-signal"></i>
+              </div>
+              <div>
+                <span class="stat-val text-green" id="stat-rooms-active-count">Hoạt động tốt</span>
+                <span class="stat-lbl">Trạng thái không gian</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Room Cards Grid -->
+          <div class="rooms-grid" id="rooms-grid-container">
+            <!-- Dynamic room cards rendered by app.js -->
           </div>
         </div>
       </main>
@@ -1746,9 +1812,87 @@
     </div>
   </div>
 
+  <!-- ==================================================================== -->
+  <!-- MODAL: THIẾT LẬP / TẠO PHÒNG MỚI (ROOM BUILDER)                      -->
+  <!-- ==================================================================== -->
+  <div class="hvac-modal-overlay hidden" id="modal-room-builder">
+    <div class="hvac-modal" style="max-width: 520px; border-radius: 20px;">
+      <div class="hvac-modal-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+            <i class="fa-solid fa-shapes"></i>
+          </span>
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;" id="modal-room-title">Thêm Phòng Mới</h3>
+            <span style="font-size: 0.78rem; color: #64748b;">Tạo không gian và phân bổ thiết bị thông minh</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-room-modal" title="Đóng">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="hvac-modal-body" style="padding: 20px 0; display: flex; flex-direction: column; gap: 18px;">
+        <!-- Tên phòng -->
+        <div>
+          <label style="font-size: 0.84rem; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">Tên phòng / Khu vực:</label>
+          <input type="text" id="input-room-name" placeholder="Ví dụ: Phòng Ngủ Master, Phòng Đọc Sách, Ban Công..." style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.9rem;" />
+        </div>
+
+        <!-- Chọn Icon đại diện -->
+        <div>
+          <label style="font-size: 0.84rem; font-weight: 700; color: #334155; margin-bottom: 8px; display: block;">Biểu tượng phòng:</label>
+          <div class="icon-picker-grid" id="room-icon-picker">
+            <button type="button" class="icon-picker-btn active" data-icon="fa-couch" title="Phòng khách"><i class="fa-solid fa-couch"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-bed" title="Phòng ngủ"><i class="fa-solid fa-bed"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-utensils" title="Phòng bếp / Ăn"><i class="fa-solid fa-utensils"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-laptop-code" title="Phòng làm việc"><i class="fa-solid fa-laptop-code"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-tv" title="Phòng giải trí"><i class="fa-solid fa-tv"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-shower" title="Phòng tắm"><i class="fa-solid fa-shower"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-plant-wilt" title="Ban công / Cây cảnh"><i class="fa-solid fa-plant-wilt"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-door-open" title="Lối vào / Hành lang"><i class="fa-solid fa-door-open"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-sun" title="Sân thượng"><i class="fa-solid fa-sun"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-warehouse" title="Nhà kho / Gara"><i class="fa-solid fa-warehouse"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-child" title="Phòng trẻ em"><i class="fa-solid fa-child"></i></button>
+            <button type="button" class="icon-picker-btn" data-icon="fa-heart" title="Phòng thờ / Riêng"><i class="fa-solid fa-heart"></i></button>
+          </div>
+        </div>
+
+        <!-- Chọn màu sắc -->
+        <div>
+          <label style="font-size: 0.84rem; font-weight: 700; color: #334155; margin-bottom: 8px; display: block;">Màu sắc chủ đạo:</label>
+          <div class="color-picker-row" id="room-color-picker">
+            <span class="color-dot active" data-color="#10b981" style="background: #10b981;"></span>
+            <span class="color-dot" data-color="#0284c7" style="background: #0284c7;"></span>
+            <span class="color-dot" data-color="#8b5cf6" style="background: #8b5cf6;"></span>
+            <span class="color-dot" data-color="#f59e0b" style="background: #f59e0b;"></span>
+            <span class="color-dot" data-color="#ef4444" style="background: #ef4444;"></span>
+            <span class="color-dot" data-color="#06b6d4" style="background: #06b6d4;"></span>
+            <span class="color-dot" data-color="#ec4899" style="background: #ec4899;"></span>
+            <span class="color-dot" data-color="#64748b" style="background: #64748b;"></span>
+          </div>
+        </div>
+
+        <!-- Gán thiết bị vào phòng này -->
+        <div>
+          <label style="font-size: 0.84rem; font-weight: 700; color: #334155; margin-bottom: 8px; display: block;">Phân bổ thiết bị vào phòng này:</label>
+          <div id="room-assign-devices-list" style="max-height: 160px; overflow-y: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; display: flex; flex-direction: column; gap: 8px;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div style="margin-top: 10px; display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" class="btn-cancel-modal" id="btn-cancel-room-modal" style="padding: 10px 18px; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; font-weight: 600; color: #64748b; cursor: pointer;">Hủy bỏ</button>
+          <button type="button" id="btn-save-room" style="padding: 10px 22px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(16,185,129,0.3);">Lưu Phòng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="js/app.js?v=87"></script>
+  <script src="js/app.js?v=88"></script>
 </body>
 </html>

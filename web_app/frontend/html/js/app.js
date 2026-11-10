@@ -2469,10 +2469,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const otaView = document.getElementById("view-firmware-update");
     const autoView = document.getElementById("view-automations");
     const notifsView = document.getElementById("view-notifications");
+    const roomView = document.getElementById("view-room-mgmt");
     if (homeDash) homeDash.style.display = "none";
     if (otaView) otaView.style.display = "none";
     if (autoView) autoView.style.display = "none";
     if (notifsView) notifsView.style.display = "none";
+    if (roomView) roomView.style.display = "none";
     if (subView) subView.style.display = "block";
     updateSidebarActive("nav-home");
 
@@ -2548,10 +2550,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const otaView = document.getElementById("view-firmware-update");
     const autoView = document.getElementById("view-automations");
     const notifsView = document.getElementById("view-notifications");
+    const roomView = document.getElementById("view-room-mgmt");
     if (subView) subView.style.display = "none";
     if (otaView) otaView.style.display = "none";
     if (autoView) autoView.style.display = "none";
     if (notifsView) notifsView.style.display = "none";
+    if (roomView) roomView.style.display = "none";
     if (homeDash) homeDash.style.display = "block";
     updateSidebarActive("nav-home");
     renderDevices();
@@ -3181,14 +3185,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (navRoomsBtn) {
     navRoomsBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      closeHubSubView(true);
-      window.location.hash = "";
-      updateSidebarActive("nav-rooms");
-      const devSection = document.querySelector(".section-block");
-      if (devSection) {
-        devSection.scrollIntoView({ behavior: "smooth" });
-      }
-      showToast("Đang hiển thị danh sách thiết bị theo Phòng khách", "info");
+      openRoomMgmtView();
     });
   }
 
@@ -4502,10 +4499,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const homeDash = document.getElementById("view-home-dashboard");
     const subView = document.getElementById("view-device-hub");
     const notifsView = document.getElementById("view-notifications");
+    const roomView = document.getElementById("view-room-mgmt");
     if (homeDash) homeDash.style.display = "none";
     if (subView) subView.style.display = "none";
     if (viewFirmwareUpdate) viewFirmwareUpdate.style.display = "none";
     if (notifsView) notifsView.style.display = "none";
+    if (roomView) roomView.style.display = "none";
     if (viewAutomations) viewAutomations.style.display = "block";
 
     updateSidebarActive("nav-automations");
@@ -5075,11 +5074,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const subView = document.getElementById("view-device-hub");
     const autoView = document.getElementById("view-automations");
     const otaView = document.getElementById("view-firmware-update");
+    const roomView = document.getElementById("view-room-mgmt");
 
     if (homeDash) homeDash.style.display = "none";
     if (subView) subView.style.display = "none";
     if (autoView) autoView.style.display = "none";
     if (otaView) otaView.style.display = "none";
+    if (roomView) roomView.style.display = "none";
     if (viewNotifications) viewNotifications.style.display = "block";
 
     updateSidebarActive("nav-notifs");
@@ -5138,6 +5139,503 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ==============================================================================
+  // QUẢN LÝ PHÒNG (ROOM MANAGEMENT ENGINE)
+  // ==============================================================================
+  const viewRoomMgmt = document.getElementById("view-room-mgmt");
+  const btnRoomsBack = document.getElementById("btn-rooms-back");
+  const btnOpenCreateRoom = document.getElementById("btn-open-create-room");
+  const roomsGridContainer = document.getElementById("rooms-grid-container");
+  const statTotalRooms = document.getElementById("stat-total-rooms");
+  const statTotalRoomDevices = document.getElementById("stat-total-room-devices");
+  const statRoomsActiveCount = document.getElementById("stat-rooms-active-count");
+
+  // Modal elements
+  const modalRoomBuilder = document.getElementById("modal-room-builder");
+  const modalRoomTitle = document.getElementById("modal-room-title");
+  const inputRoomName = document.getElementById("input-room-name");
+  const roomIconPicker = document.getElementById("room-icon-picker");
+  const roomColorPicker = document.getElementById("room-color-picker");
+  const roomAssignDevicesList = document.getElementById("room-assign-devices-list");
+  const btnCloseRoomModal = document.getElementById("btn-close-room-modal");
+  const btnCancelRoomModal = document.getElementById("btn-cancel-room-modal");
+  const btnSaveRoom = document.getElementById("btn-save-room");
+
+  const ROOMS_STORAGE_KEY = "gate_user_rooms";
+  let editingRoomId = null;
+  let selectedRoomIcon = "fa-couch";
+  let selectedRoomColor = "#10b981";
+
+  const DEFAULT_ROOMS = [
+    {
+      id: "room_living",
+      name: "Phòng khách",
+      icon: "fa-couch",
+      color: "#00b06f",
+      isDefault: true
+    },
+    {
+      id: "room_bedroom",
+      name: "Phòng ngủ",
+      icon: "fa-bed",
+      color: "#0284c7"
+    },
+    {
+      id: "room_work",
+      name: "Phòng làm việc",
+      icon: "fa-laptop-code",
+      color: "#8b5cf6"
+    },
+    {
+      id: "room_kitchen",
+      name: "Nhà bếp",
+      icon: "fa-utensils",
+      color: "#f59e0b"
+    }
+  ];
+
+  function getStoredRooms() {
+    try {
+      const stored = localStorage.getItem(ROOMS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_ROOMS;
+  }
+
+  function saveStoredRooms(rooms) {
+    localStorage.setItem(ROOMS_STORAGE_KEY, JSON.stringify(rooms));
+    syncRoomDropdowns();
+  }
+
+  function syncRoomDropdowns() {
+    const rooms = getStoredRooms();
+    const dropdowns = [
+      document.getElementById("drawer-edit-room"),
+      document.getElementById("new-device-room")
+    ];
+
+    dropdowns.forEach(dd => {
+      if (!dd) return;
+      const curVal = dd.value;
+      let html = "";
+      rooms.forEach(r => {
+        html += `<option value="${escapeHtml(r.name)}">${escapeHtml(r.name)}</option>`;
+      });
+      dd.innerHTML = html;
+      if (curVal && rooms.some(r => r.name === curVal)) {
+        dd.value = curVal;
+      }
+    });
+  }
+
+  function getAllSystemDevices() {
+    const devs = [];
+    const gwRoom = localStorage.getItem("gate_room") || "Phòng khách";
+    const gwName = localStorage.getItem("gate_custom_name") || "Trạm Gateway ESP32-S3";
+    devs.push({
+      id: "gateway_master",
+      name: gwName,
+      type: "gateway",
+      room: gwRoom,
+      icon: "fa-server",
+      isOnline: isGatewayOnline
+    });
+
+    customDevices.forEach(d => {
+      let icon = "fa-microchip";
+      if (d.type === "sensor") icon = "fa-person-rays";
+      else if (d.type === "ir_hub") icon = "fa-wifi";
+      else if (d.type === "ac") icon = "fa-wind";
+
+      devs.push({
+        id: d.id,
+        name: d.name,
+        type: d.type,
+        room: d.room || "Phòng khách",
+        icon,
+        isOnline: isDeviceOnline(d)
+      });
+
+      if (d.children && Array.isArray(d.children)) {
+        d.children.forEach(c => {
+          devs.push({
+            id: "child_" + c.id,
+            name: c.name || "Điều hòa",
+            type: "ac_child",
+            parentId: d.id,
+            room: d.room || "Phòng khách",
+            icon: "fa-wind",
+            isOnline: isDeviceOnline(d)
+          });
+        });
+      }
+    });
+
+    devs.push({
+      id: "relay_1",
+      name: "Đèn chính (Relay 1)",
+      type: "relay",
+      room: gwRoom,
+      icon: "fa-lightbulb",
+      isOnline: isGatewayOnline,
+      state: relayStates[1]
+    });
+
+    return devs;
+  }
+
+  function renderRoomsView() {
+    if (!roomsGridContainer) return;
+
+    const rooms = getStoredRooms();
+    const allDevs = getAllSystemDevices();
+
+    if (statTotalRooms) statTotalRooms.innerText = rooms.length.toString().padStart(2, '0');
+    if (statTotalRoomDevices) statTotalRoomDevices.innerText = allDevs.length.toString();
+
+    let html = "";
+    rooms.forEach(room => {
+      const roomDevs = allDevs.filter(d => d.room === room.name);
+      const isDefault = !!room.isDefault;
+      const hasSensor = roomDevs.some(d => d.type === "sensor" || d.name.includes("Cảm Biến") || d.name.includes("SHT30")) || room.name === "Phòng khách";
+      const isOccupied = sensorData.hasData && (sensorData.presence === true || Number(sensorData.presence) === 1);
+
+      html += `
+        <div class="room-card" data-room-id="${escapeHtml(room.id)}" data-room-name="${escapeHtml(room.name)}">
+          <div class="room-card-header">
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+              <div class="room-card-icon" style="background: ${escapeHtml(room.color || '#10b981')}18; color: ${escapeHtml(room.color || '#10b981')};">
+                <i class="fa-solid ${escapeHtml(room.icon || 'fa-couch')}"></i>
+              </div>
+              <div class="room-card-titles">
+                <h4 class="room-card-name" title="${escapeHtml(room.name)}">${escapeHtml(room.name)}</h4>
+                <span class="room-card-count">${roomDevs.length} thiết bị liên kết</span>
+              </div>
+            </div>
+            <div class="room-card-menu-btns">
+              <button type="button" class="btn-room-icon btn-edit-room" data-id="${escapeHtml(room.id)}" title="Chỉnh sửa thông tin phòng">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              ${!isDefault ? `
+                <button type="button" class="btn-room-icon btn-room-del btn-del-room" data-id="${escapeHtml(room.id)}" title="Xóa phòng này">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          ${hasSensor ? `
+            <div class="room-env-strip">
+              <div class="room-env-item" title="Nhiệt độ phòng">
+                <i class="fa-solid fa-temperature-half" style="color: #ef4444;"></i>
+                <span>${sensorData.hasData && sensorData.temperature > 0 ? sensorData.temperature.toFixed(1) + '°C' : '27.0°C'}</span>
+              </div>
+              <div class="room-env-item" title="Độ ẩm không khí">
+                <i class="fa-solid fa-droplet" style="color: #0284c7;"></i>
+                <span>${sensorData.hasData && sensorData.humidity > 0 ? sensorData.humidity.toFixed(0) + '%' : '77%'}</span>
+              </div>
+              <div class="room-env-item" title="Hiện diện Radar LD2410B">
+                <i class="fa-solid fa-person-walking" style="color: ${isOccupied ? '#059669' : '#94a3b8'};"></i>
+                <span style="color: ${isOccupied ? '#059669' : '#64748b'};">${isOccupied ? 'Có người' : 'Phòng trống'}</span>
+              </div>
+            </div>
+          ` : `
+            <div class="room-env-strip" style="color: #94a3b8; font-size: 0.75rem; justify-content: center; gap: 8px;">
+              <i class="fa-solid fa-circle-info"></i> Chưa gắn cảm biến môi trường tại khu vực này
+            </div>
+          `}
+
+          <div class="room-devices-box">
+            <div class="room-devices-title">Thiết bị trong phòng:</div>
+            <div class="room-device-chips">
+              ${roomDevs.length > 0 ? roomDevs.map(d => `
+                <span class="room-device-pill" title="${escapeHtml(d.name)}">
+                  <i class="fa-solid ${escapeHtml(d.icon)}" style="color: ${d.isOnline ? '#00b06f' : '#94a3b8'};"></i>
+                  <span>${escapeHtml(d.name)}</span>
+                </span>
+              `).join('') : '<span style="font-size: 0.76rem; color: #94a3b8; font-style: italic;">Chưa có thiết bị nào trong phòng này</span>'}
+            </div>
+          </div>
+
+          <div class="room-card-footer">
+            <button type="button" class="btn-room-off" data-room="${escapeHtml(room.name)}" title="Tắt toàn bộ thiết bị trong phòng này">
+              <i class="fa-solid fa-power-off"></i> Tắt hết
+            </button>
+            <button type="button" class="btn-room-explore" data-room="${escapeHtml(room.name)}" title="Xem chi tiết thiết bị">
+              <i class="fa-solid fa-arrow-right"></i> Xem chi tiết
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    roomsGridContainer.innerHTML = html;
+
+    roomsGridContainer.querySelectorAll(".btn-edit-room").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        openRoomBuilderModal(id);
+      });
+    });
+
+    roomsGridContainer.querySelectorAll(".btn-del-room").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        const rooms = getStoredRooms();
+        const room = rooms.find(r => r.id === id);
+        if (!room) return;
+
+        if (confirm(`Bạn có chắc chắn muốn xóa phòng "${room.name}"? Các thiết bị trong phòng sẽ được chuyển về "Phòng khách".`)) {
+          customDevices.forEach(d => {
+            if (d.room === room.name) d.room = "Phòng khách";
+          });
+          localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+          if (localStorage.getItem("gate_room") === room.name) {
+            localStorage.setItem("gate_room", "Phòng khách");
+          }
+
+          const filtered = rooms.filter(r => r.id !== id);
+          saveStoredRooms(filtered);
+          renderRoomsView();
+          renderDevices();
+          showToast(`Đã xóa phòng "${room.name}" thành công!`, "info");
+        }
+      });
+    });
+
+    roomsGridContainer.querySelectorAll(".btn-room-off").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const roomName = btn.getAttribute("data-room");
+        showToast(`Đang tắt các thiết bị tại ${roomName}...`, "info");
+
+        acState.power = 0;
+        updateAcModalUI();
+        await callApi("/api/hvac/control", "POST", { power: 0, temp: acState.temp, mode: acState.mode, fan: acState.fan });
+
+        relayStates[1] = 0;
+        await callApi("/api/gateway/relay/1", "POST", { state: 0 });
+
+        renderDevices();
+        renderRoomsView();
+        showToast(`Đã tắt toàn bộ thiết bị tại ${roomName}!`, "success");
+
+        if (typeof addSystemNotification === "function") {
+          addSystemNotification({
+            type: "device",
+            title: `Tắt thiết bị tại ${roomName}`,
+            message: `Đã thực hiện tắt điều hòa và đèn chiếu sáng tại khu vực ${roomName}.`,
+            badge: "Phòng"
+          });
+        }
+      });
+    });
+
+    roomsGridContainer.querySelectorAll(".btn-room-explore").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const roomName = btn.getAttribute("data-room");
+        closeHubSubView(true);
+        window.location.hash = "";
+        const devSec = document.querySelector(".section-block");
+        if (devSec) devSec.scrollIntoView({ behavior: "smooth" });
+        showToast(`Đang hiển thị không gian: ${roomName}`, "info");
+      });
+    });
+  }
+
+  function openRoomBuilderModal(roomId = null) {
+    editingRoomId = roomId;
+    const rooms = getStoredRooms();
+    const allDevs = getAllSystemDevices();
+
+    if (roomId) {
+      const room = rooms.find(r => r.id === roomId);
+      if (room) {
+        if (modalRoomTitle) modalRoomTitle.innerText = "Chỉnh Sửa Phòng";
+        if (inputRoomName) inputRoomName.value = room.name;
+        selectedRoomIcon = room.icon || "fa-couch";
+        selectedRoomColor = room.color || "#10b981";
+      }
+    } else {
+      if (modalRoomTitle) modalRoomTitle.innerText = "Thêm Phòng Mới";
+      if (inputRoomName) inputRoomName.value = "";
+      selectedRoomIcon = "fa-couch";
+      selectedRoomColor = "#10b981";
+    }
+
+    if (roomIconPicker) {
+      roomIconPicker.querySelectorAll(".icon-picker-btn").forEach(btn => {
+        const icon = btn.getAttribute("data-icon");
+        btn.classList.toggle("active", icon === selectedRoomIcon);
+      });
+    }
+
+    if (roomColorPicker) {
+      roomColorPicker.querySelectorAll(".color-dot").forEach(dot => {
+        const col = dot.getAttribute("data-color");
+        dot.classList.toggle("active", col === selectedRoomColor);
+      });
+    }
+
+    if (roomAssignDevicesList) {
+      const currentRoomName = roomId ? (rooms.find(r => r.id === roomId)?.name || "") : "";
+      let devHtml = "";
+      allDevs.forEach(d => {
+        const isAssigned = currentRoomName && d.room === currentRoomName;
+        devHtml += `
+          <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; cursor: pointer; padding: 6px 8px; border-radius: 6px; background: #fff; border: 1px solid #e2e8f0;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid ${escapeHtml(d.icon)}" style="color: ${escapeHtml(selectedRoomColor)};"></i>
+              <span style="font-weight: 600; color: #1e293b;">${escapeHtml(d.name)}</span>
+              <span style="font-size: 0.72rem; color: #94a3b8;">(${escapeHtml(d.room)})</span>
+            </div>
+            <input type="checkbox" class="assign-dev-checkbox" data-dev-id="${escapeHtml(d.id)}" ${isAssigned ? 'checked' : ''} />
+          </label>
+        `;
+      });
+      roomAssignDevicesList.innerHTML = devHtml;
+    }
+
+    if (modalRoomBuilder) modalRoomBuilder.classList.remove("hidden");
+  }
+
+  function closeRoomBuilderModal() {
+    if (modalRoomBuilder) modalRoomBuilder.classList.add("hidden");
+    editingRoomId = null;
+  }
+
+  function openRoomMgmtView() {
+    currentHubView = null;
+    const homeDash = document.getElementById("view-home-dashboard");
+    const subView = document.getElementById("view-device-hub");
+    const autoView = document.getElementById("view-automations");
+    const otaView = document.getElementById("view-firmware-update");
+    const notifsView = document.getElementById("view-notifications");
+
+    if (homeDash) homeDash.style.display = "none";
+    if (subView) subView.style.display = "none";
+    if (autoView) autoView.style.display = "none";
+    if (otaView) otaView.style.display = "none";
+    if (notifsView) notifsView.style.display = "none";
+    if (viewRoomMgmt) viewRoomMgmt.style.display = "block";
+
+    updateSidebarActive("nav-rooms");
+    renderRoomsView();
+    window.location.hash = "rooms";
+  }
+
+  if (btnRoomsBack) {
+    btnRoomsBack.addEventListener("click", () => {
+      closeHubSubView(true);
+      window.location.hash = "";
+    });
+  }
+
+  if (btnOpenCreateRoom) {
+    btnOpenCreateRoom.addEventListener("click", () => openRoomBuilderModal());
+  }
+
+  if (btnCloseRoomModal) btnCloseRoomModal.addEventListener("click", closeRoomBuilderModal);
+  if (btnCancelRoomModal) btnCancelRoomModal.addEventListener("click", closeRoomBuilderModal);
+
+  if (roomIconPicker) {
+    roomIconPicker.querySelectorAll(".icon-picker-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        roomIconPicker.querySelectorAll(".icon-picker-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedRoomIcon = btn.getAttribute("data-icon") || "fa-couch";
+      });
+    });
+  }
+
+  if (roomColorPicker) {
+    roomColorPicker.querySelectorAll(".color-dot").forEach(dot => {
+      dot.addEventListener("click", () => {
+        roomColorPicker.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+        dot.classList.add("active");
+        selectedRoomColor = dot.getAttribute("data-color") || "#10b981";
+      });
+    });
+  }
+
+  if (btnSaveRoom) {
+    btnSaveRoom.addEventListener("click", () => {
+      const name = inputRoomName ? inputRoomName.value.trim() : "";
+      if (!name) {
+        showToast("Vui lòng nhập tên phòng!", "error");
+        return;
+      }
+
+      let rooms = getStoredRooms();
+
+      if (editingRoomId) {
+        const room = rooms.find(r => r.id === editingRoomId);
+        if (room) {
+          const oldName = room.name;
+          room.name = name;
+          room.icon = selectedRoomIcon;
+          room.color = selectedRoomColor;
+
+          if (oldName !== name) {
+            customDevices.forEach(d => {
+              if (d.room === oldName) d.room = name;
+            });
+            localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+            if (localStorage.getItem("gate_room") === oldName) {
+              localStorage.setItem("gate_room", name);
+            }
+          }
+        }
+      } else {
+        if (rooms.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+          showToast(`Phòng "${name}" đã tồn tại!`, "error");
+          return;
+        }
+
+        const newRoom = {
+          id: "room_" + Date.now(),
+          name,
+          icon: selectedRoomIcon,
+          color: selectedRoomColor,
+          isDefault: false
+        };
+        rooms.push(newRoom);
+      }
+
+      if (roomAssignDevicesList) {
+        const chks = roomAssignDevicesList.querySelectorAll(".assign-dev-checkbox:checked");
+        const assignedIds = Array.from(chks).map(c => c.getAttribute("data-dev-id"));
+
+        if (assignedIds.includes("gateway_master")) {
+          localStorage.setItem("gate_room", name);
+        }
+        customDevices.forEach(d => {
+          if (assignedIds.includes(d.id)) {
+            d.room = name;
+          }
+        });
+        localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+      }
+
+      saveStoredRooms(rooms);
+      renderRoomsView();
+      renderDevices();
+      closeRoomBuilderModal();
+      showToast(`Đã lưu không gian [${name}] thành công!`, "success");
+
+      if (typeof addSystemNotification === "function") {
+        addSystemNotification({
+          type: "device",
+          title: `Cập nhật phòng: ${name}`,
+          message: `Đã lưu cấu hình không gian và phân bổ thiết bị tại khu vực ${name}.`,
+          badge: "Phòng"
+        });
+      }
+    });
+  }
+
   // Mở màn hình cập nhật Firmware OTA
   function openFirmwareView() {
     currentHubView = null;
@@ -5145,10 +5643,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const subView = document.getElementById("view-device-hub");
     const autoView = document.getElementById("view-automations");
     const notifsView = document.getElementById("view-notifications");
+    const roomView = document.getElementById("view-room-mgmt");
     if (homeDash) homeDash.style.display = "none";
     if (subView) subView.style.display = "none";
     if (autoView) autoView.style.display = "none";
     if (notifsView) notifsView.style.display = "none";
+    if (roomView) roomView.style.display = "none";
     if (viewFirmwareUpdate) viewFirmwareUpdate.style.display = "block";
 
     updateSidebarActive("nav-firmware");
@@ -5889,6 +6389,8 @@ document.addEventListener("DOMContentLoaded", () => {
       openAutomationsView();
     } else if (window.location.hash === "#notifications" || window.location.hash === "#notifs") {
       openNotificationsView();
+    } else if (window.location.hash === "#rooms" || window.location.hash === "#room-mgmt") {
+      openRoomMgmtView();
     }
   }
   window.addEventListener("hashchange", checkUrlHashRoute);
@@ -5897,6 +6399,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Khởi tạo ban đầu
   renderDevices();
   renderFavoriteScenes();
+  syncRoomDropdowns();
   updateNotificationBadges();
   updateAcModalUI();
   fetchStatus();
