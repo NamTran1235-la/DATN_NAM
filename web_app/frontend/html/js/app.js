@@ -7277,6 +7277,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function initGlobalAcLongPress() {
     function startHold(e) {
+      if (e.target.closest(".btn-ac-card-direct-gear")) return;
       const card = e.target.closest(".subview-ac-card, .scene-ac-card, [data-child-id], #card-ir-hub-master");
       if (!card) return;
       if (e.button && e.button !== 0) return;
@@ -7353,6 +7354,17 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("touchcancel", cancelHold);
 
     document.addEventListener("click", (e) => {
+      const gear = e.target.closest(".btn-ac-card-direct-gear");
+      if (gear) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const acId = gear.getAttribute("data-ac-id");
+        const allAcs = getAllAvailableAcs();
+        const acObj = allAcs.find(a => String(a.id) === String(acId)) || { id: acId, name: `Điều hòa ${acId}` };
+        if (openAcLeftDrawer) openAcLeftDrawer(acObj);
+        return;
+      }
       if (globalHoldTriggered) {
         e.preventDefault();
         e.stopPropagation();
