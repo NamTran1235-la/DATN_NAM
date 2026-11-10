@@ -2365,51 +2365,55 @@ body {
 .sensor-metric-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin: 5px 0 3px;
+  gap: 8px;
+  margin: 0 0 6px 0;
   flex-wrap: nowrap;
+}
+
+.sensor-metric-row.above-title {
+  margin-bottom: 5px;
 }
 
 .sensor-metric-chip {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 0.73rem;
+  gap: 4px;
+  font-size: 0.80rem;
   font-weight: 700;
   color: #1e293b;
   white-space: nowrap;
 }
 
 .sensor-metric-chip i {
-  font-size: 0.78rem;
+  font-size: 0.86rem;
 }
 
 .sensor-metric-chip.offline {
   color: #94a3b8;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 600;
 }
 
 .sensor-status-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-top: 2px;
+  gap: 6px;
+  margin-top: 3px;
   flex-wrap: nowrap;
 }
 
 .sensor-status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 0.68rem;
+  gap: 4px;
+  font-size: 0.74rem;
   font-weight: 600;
   color: #64748b;
   white-space: nowrap;
 }
 
 .sensor-status-chip i {
-  font-size: 0.72rem;
+  font-size: 0.80rem;
 }
 
 .sensor-status-chip.online {
