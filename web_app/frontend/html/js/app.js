@@ -2737,9 +2737,53 @@ document.addEventListener("DOMContentLoaded", () => {
     return `<span style="display:block;margin-top:4px;color:${known && occupied ? '#059669' : '#64748b'};font-weight:600;"><i class="fa-solid ${known && occupied ? 'fa-person-walking' : 'fa-house-user'}"></i> ${label}</span>`;
   }
 
+  // ── BỘ LỌC THIẾT BỊ THEO PHÒNG TRÊN DASHBOARD ─────────────────────────────
+  let selectedRoomFilter = "all";
+
+  function renderDashboardRoomFilters() {
+    const container = document.getElementById("dashboard-room-filters");
+    if (!container) return;
+
+    const rooms = (typeof getStoredRooms === "function") ? getStoredRooms() : [];
+    const allDevs = (typeof getAllSystemDevices === "function") ? getAllSystemDevices() : [];
+    const totalCount = allDevs.length;
+
+    let html = `
+      <div class="room-filter-chip ${selectedRoomFilter === 'all' ? 'active' : ''}" data-room-filter="all">
+        <i class="fa-solid fa-shapes"></i>
+        <span>Tất cả</span>
+        <span class="chip-badge">${totalCount}</span>
+      </div>
+    `;
+
+    rooms.forEach(room => {
+      const devCount = allDevs.filter(d => d.room === room.name).length;
+      const isActive = selectedRoomFilter === room.name;
+      const activeStyle = isActive ? `background: ${escapeHtml(room.color || '#00b06f')}; border-color: ${escapeHtml(room.color || '#00b06f')}; color: #ffffff;` : '';
+      html += `
+        <div class="room-filter-chip ${isActive ? 'active' : ''}" data-room-filter="${escapeHtml(room.name)}" style="${activeStyle}">
+          <i class="fa-solid ${escapeHtml(room.icon || 'fa-couch')}" style="${isActive ? 'color:#ffffff;' : `color:${escapeHtml(room.color || '#10b981')};`}"></i>
+          <span>${escapeHtml(room.name)}</span>
+          <span class="chip-badge">${devCount}</span>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+
+    container.querySelectorAll(".room-filter-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        selectedRoomFilter = chip.getAttribute("data-room-filter") || "all";
+        renderDashboardRoomFilters();
+        renderDevices();
+      });
+    });
+  }
+
   function renderDevices() {
     foundHub = getActiveIrHub();
     refreshPresencePanel();
+    renderDashboardRoomFilters();
     if (currentHubView) {
       const liveDev = customDevices.find(d => currentHubView.dev && d.id === currentHubView.dev.id) || foundHub;
       currentHubView.dev = liveDev;
@@ -2816,6 +2860,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const userAddedDevices = customDevices.filter(d => d.type !== "ir_hub" && d.id !== "dev_ir_hub_hunonic" && !(d.id && d.id.includes("ir_hub")));
     const gwChildCount = (foundHub ? 1 : 0) + userAddedDevices.length;
 
+    // Phân vùng lọc không gian phòng
+    const gwRoom = localStorage.getItem("gate_room") || "Phòng khách";
+    const showGateway = (selectedRoomFilter === "all" || selectedRoomFilter === gwRoom);
+
+    const irRoom = (foundHub && foundHub.room) || gwRoom;
+    const showIrHub = foundHub && (selectedRoomFilter === "all" || selectedRoomFilter === irRoom);
+
+    let visibleCardsCount = 0;
+    if (showGateway) visibleCardsCount++;
+    if (showIrHub) visibleCardsCount++;
+
     // Tạo HTML cho các thiết bị riêng lẻ khác nếu người dùng thêm vào
     let customCardsHtml = "";
     customDevices.forEach((dev) => {
@@ -2823,6 +2878,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const isOnline = isDeviceOnline(dev);
       if (!isOnline) offlineCount++;
+
+      const devRoom = dev.room || gwRoom;
+      if (selectedRoomFilter !== "all" && selectedRoomFilter !== devRoom) return;
+
+      visibleCardsCount++;
 
       let iconSvg = getSensorHexSvg();
       let subText = "Trực tuyến";
@@ -2845,9 +2905,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (dev.type === "sensor") {
-          subText += `<span style="display:block;">${isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}</span>`;
-          subText += getNodePresenceHtml(isOnline);
-        }
+        subText += `<span style="display:block;">${isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}</span>`;
+        subText += getNodePresenceHtml(isOnline);
+      }
 
       if (dev.type === "sensor" && !isOnline) subText = "Chờ dữ liệu mới";
 
@@ -2868,7 +2928,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     let irCardHtml = "";
-    if (foundHub) {
+    if (showIrHub) {
       irCardHtml = `
         <!-- CARD 2: IR TRUNG TÂM (CHỨA CÁC ĐIỀU HÒA) -->
         <div class="hunonic-card" id="card-ir-hub-master" data-id="${escapeHtml(foundHub.id)}" title="Bấm vào để mở các thiết bị trong IR">
@@ -2888,8 +2948,9 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-    // RENDER LƯỚI THIẾT BỊ HAY DÙNG CHUẨN HUNONIC (GIỐNG SCREENSHOT 1)
-    devicesGrid.innerHTML = `
+    let gwCardHtml = "";
+    if (showGateway) {
+      gwCardHtml = `
       <!-- CARD 1: TRẠM GATEWAY ESP32-S3 -->
       <div class="hunonic-card" id="card-gateway-master" title="Bấm vào để xem các thiết bị trong Gateway">
         <div class="hunonic-card-top">
@@ -2903,12 +2964,25 @@ document.addEventListener("DOMContentLoaded", () => {
           <p class="hunonic-card-sub ${isGatewayOnline ? 'on' : ''}">Thiết bị con: ${gwChildCount}</p>
         </div>
       </div>
+      `;
+    }
 
-      ${irCardHtml}
-
-      <!-- CÁC THIẾT BỊ RIÊNG KHÁC -->
-      ${customCardsHtml}
-    `;
+    // RENDER LƯỚI THIẾT BỊ HAY DÙNG CHUẨN HUNONIC
+    if (visibleCardsCount === 0) {
+      devicesGrid.innerHTML = `
+        <div class="empty-room-placeholder">
+          <i class="fa-solid fa-shapes"></i>
+          <h4>Không có thiết bị nào trong không gian "${escapeHtml(selectedRoomFilter)}"</h4>
+          <p>Hãy vào mục <strong>Quản lý phòng</strong> để phân bổ thiết bị hoặc chọn <strong>Tất cả</strong> để xem toàn bộ.</p>
+        </div>
+      `;
+    } else {
+      devicesGrid.innerHTML = `
+        ${gwCardHtml}
+        ${irCardHtml}
+        ${customCardsHtml}
+      `;
+    }
 
     // Cập nhật bộ đếm trên cùng
     if (countDevicesOn) countDevicesOn.innerText = onCount.toString().padStart(2, '0');
@@ -4098,6 +4172,27 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Đã kết nối Gateway ESP32-S3 thành công! Đã quét được thiết bị.", "success");
       }
 
+      // Ghi nhận trạng thái kết nối của Gateway vào hệ thống thông báo
+      if (isGatewayOnline && !prevOnline) {
+        if (typeof addSystemNotification === "function") {
+          addSystemNotification({
+            type: "device",
+            title: "Trạm Gateway đã kết nối Cloud",
+            message: "Gateway ESP32-S3 kết nối thành công tới MQTT Broker (HiveMQ Cloud).",
+            badge: "Hệ thống"
+          });
+        }
+      } else if (!isGatewayOnline && prevOnline) {
+        if (typeof addSystemNotification === "function") {
+          addSystemNotification({
+            type: "alert",
+            title: "Cảnh báo: Gateway ESP32-S3 Ngoại tuyến",
+            message: "Trạm Gateway bị mất tín hiệu kết nối máy chủ hoặc mất nguồn điện.",
+            badge: "Cảnh báo"
+          });
+        }
+      }
+
       if (d.relay1 !== undefined) relayStates[1] = d.relay1;
       if (d.relay2 !== undefined) relayStates[2] = d.relay2;
 
@@ -4312,6 +4407,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const isSensorAdded = customDevices.some(cd => cd.type === "sensor" || cd.id === "dev_espnow_node_1" || (cd.id && cd.id.includes("espnow")));
         if (isSensorAdded && isNodeOnline && sensorData.hasData) {
+          // Cảnh báo nhiệt độ phòng cao bất thường
+          if (sensorData.temp >= 35 && (Date.now() - lastTempAlertTime > 15 * 60000)) {
+            lastTempAlertTime = Date.now();
+            if (typeof addSystemNotification === "function") {
+              addSystemNotification({
+                type: "alert",
+                title: `Cảnh báo: Nhiệt độ phòng cao (${sensorData.temp.toFixed(1)}°C)`,
+                message: `Cảm biến SHT30 ghi nhận nhiệt độ phòng vượt ngưỡng 35°C. Đề xuất bật điều hòa hoặc quạt làm mát.`,
+                badge: "Cảnh báo"
+              });
+            }
+          }
+
           if (weatherTempDisplay) weatherTempDisplay.innerHTML = `${Math.round(Number(sensorData.temp))}<span class="deg-unit">°C</span>`;
           if (weatherHumDisplay) {
             weatherHumDisplay.innerText = sensorData.hum > 120 ? `Áp suất ${Math.round(Number(sensorData.hum))} hPa` : `Độ ẩm ${Math.round(Number(sensorData.hum))}%`;
@@ -4353,6 +4461,11 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       sensorData.isOnline = false;
       renderDevices();
+    }
+
+    // Đánh giá logic tự động hóa thông minh (ECA Automation Engine)
+    if (typeof evaluateAutomationRules === "function") {
+      evaluateAutomationRules(sensorData, acState, relayStates);
     }
   }
 
@@ -4419,6 +4532,151 @@ document.addEventListener("DOMContentLoaded", () => {
   const navAutomationsBtn = document.getElementById("nav-automations");
   const btnAutoBack = document.getElementById("btn-auto-back");
   const btnOpenCreateAuto = document.getElementById("btn-open-create-auto");
+
+  // ── LIVE RUNTIME ENGINE CHO TỰ ĐỘNG HÓA (ECA RULES ENGINE) ────────────────
+  const automationCooldowns = {};
+  let consecutiveAbsentCycles = 0;
+  let consecutivePresentCycles = 0;
+  let lastTempAlertTime = 0;
+
+  async function evaluateAutomationRules(sensors, ac, relays) {
+    if (!sensors || !isGatewayOnline) return;
+    const autos = getStoredAutomations();
+    if (!autos || autos.length === 0) return;
+
+    const now = Date.now();
+    const COOLDOWN_MS = 35000; // 35s cooldown giữa các lần tự động kích hoạt một rule
+
+    const hasPresence = Boolean(sensors.isOnline && (sensors.presence === 1 || sensors.presence === true));
+    const isAbsent = Boolean(sensors.isOnline && (sensors.presence === 0 || sensors.presence === false));
+
+    if (hasPresence) {
+      consecutivePresentCycles++;
+      consecutiveAbsentCycles = 0;
+    } else if (isAbsent) {
+      consecutiveAbsentCycles++;
+      consecutivePresentCycles = 0;
+    }
+
+    for (const rule of autos) {
+      if (!rule.enabled || !rule.actions) continue;
+
+      const lastRan = automationCooldowns[rule.id] || 0;
+      if (now - lastRan < COOLDOWN_MS) continue;
+
+      let shouldTrigger = false;
+      let triggerReason = "";
+
+      // 1. Eco Presence: Phòng trống liên tục >= 2 chu kỳ & đang có thiết bị bật
+      if (rule.id === "auto_eco_presence") {
+        const anyOn = (ac && ac.power === 1) || (relays && relays[1] === 1);
+        if (isAbsent && consecutiveAbsentCycles >= 2 && anyOn) {
+          shouldTrigger = true;
+          triggerReason = "Phòng trống liên tục: Hệ thống tự động tắt Điều hòa & ngắt Relay 1 (Đèn chính) để tiết kiệm điện.";
+        }
+      }
+      // 2. Auto Cool: Có người liên tục >= 2 chu kỳ & nhiệt độ phòng >= 28°C & Điều hòa đang tắt
+      else if (rule.id === "auto_comfort_cool") {
+        const isWarm = (sensors.temp && sensors.temp >= 28.0);
+        const isAcOff = (ac && ac.power === 0);
+        if (hasPresence && consecutivePresentCycles >= 2 && isWarm && isAcOff) {
+          shouldTrigger = true;
+          triggerReason = `Phát hiện có người và nhiệt độ phòng ${sensors.temp.toFixed(1)}°C: Tự động bật Điều hòa 24°C Cool làm mát.`;
+        }
+      }
+      // 3. Peak Shaving: Quá tải điện
+      else if (rule.id === "auto_power_protect") {
+        if (sensors.power && sensors.power > 2500 && (ac.temp < 27 || relays[2] === 1)) {
+          shouldTrigger = true;
+          triggerReason = "Công suất điện lưới cao: Tự động tăng nhiệt độ Điều hòa lên 27°C & ngắt Relay 2.";
+        }
+      }
+      // 4. Night Sleep: Đêm khuya & Điều hòa đang bật quá lạnh
+      else if (rule.id === "auto_night_sleep") {
+        const hour = new Date().getHours();
+        const isNight = (hour >= 23 || hour <= 5);
+        if (isNight && ac && ac.power === 1 && ac.temp < 27) {
+          shouldTrigger = true;
+          triggerReason = "Khung giờ đêm khuya: Tự động tăng nhiệt độ Điều hòa lên 27°C Sleep để giữ ấm cơ thể.";
+        }
+      }
+      // 5. Kịch bản tùy chỉnh của người dùng
+      else if (rule.triggerText) {
+        if (rule.badge === "Radar mmWave") {
+          if (rule.triggerText.includes("TRỐNG") && isAbsent && consecutiveAbsentCycles >= 2) {
+            const needTurnOff = (rule.actions.ac_power === 0 && ac.power === 1) || (rule.actions.relay1 === 0 && relays[1] === 1);
+            if (needTurnOff) {
+              shouldTrigger = true;
+              triggerReason = `Radar phát hiện phòng trống: Kích hoạt [${rule.name}]`;
+            }
+          } else if (rule.triggerText.includes("CÓ NGƯỜI") && hasPresence && consecutivePresentCycles >= 2) {
+            const needTurnOn = (rule.actions.ac_power === 1 && ac.power === 0) || (rule.actions.relay1 === 1 && relays[1] === 0);
+            if (needTurnOn) {
+              shouldTrigger = true;
+              triggerReason = `Radar phát hiện có người: Kích hoạt [${rule.name}]`;
+            }
+          }
+        } else if (rule.badge === "Nhiệt độ") {
+          const match = rule.triggerText.match(/>\s*([0-9.]+)/);
+          const threshold = match ? parseFloat(match[1]) : 28;
+          if (sensors.temp && sensors.temp > threshold && ac.power === 0) {
+            shouldTrigger = true;
+            triggerReason = `Nhiệt độ ${sensors.temp.toFixed(1)}°C vượt ngưỡng ${threshold}°C: Kích hoạt [${rule.name}]`;
+          }
+        } else if (rule.badge === "Hẹn giờ") {
+          const match = rule.triggerText.match(/lúc\s*([0-9]+):00/);
+          if (match) {
+            const schedHour = parseInt(match[1], 10);
+            if (new Date().getHours() === schedHour) {
+              shouldTrigger = true;
+              triggerReason = `Đến lịch hẹn ${schedHour}:00: Kích hoạt [${rule.name}]`;
+            }
+          }
+        }
+      }
+
+      if (shouldTrigger) {
+        automationCooldowns[rule.id] = now;
+        const acts = rule.actions;
+
+        if (acts.ac_power !== undefined) {
+          acState.power = acts.ac_power;
+          if (acts.ac_temp > 0) acState.temp = acts.ac_temp;
+          if (acts.ac_mode !== undefined) acState.mode = acts.ac_mode;
+          if (acts.ac_fan !== undefined) acState.fan = acts.ac_fan;
+          updateAcModalUI();
+          callApi("/api/hvac/control", "POST", {
+            power: acState.power,
+            temp: acState.temp,
+            mode: acState.mode,
+            fan: acState.fan
+          }).catch(err => console.error("Auto AC err:", err));
+        }
+
+        if (acts.relay1 !== undefined && acts.relay1 >= 0) {
+          relayStates[1] = acts.relay1;
+          callApi("/api/gateway/relay/1", "POST", { state: acts.relay1 }).catch(err => console.error("Auto R1 err:", err));
+        }
+
+        if (acts.relay2 !== undefined && acts.relay2 >= 0) {
+          relayStates[2] = acts.relay2;
+          callApi("/api/gateway/relay/2", "POST", { state: acts.relay2 }).catch(err => console.error("Auto R2 err:", err));
+        }
+
+        renderDevices();
+        showToast(`⚡ Tự động hóa: [${rule.name}] đã thực thi!`, "success", 7000);
+
+        if (typeof addSystemNotification === "function") {
+          addSystemNotification({
+            type: "automation",
+            title: `Tự động hóa: ${rule.name}`,
+            message: triggerReason || rule.actionText || "Đã áp dụng lệnh điều khiển tự động.",
+            badge: rule.badge || "Tự động"
+          });
+        }
+      }
+    }
+  }
 
   const DEFAULT_AUTOMATIONS = [
     {
@@ -5208,6 +5466,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveStoredRooms(rooms) {
     localStorage.setItem(ROOMS_STORAGE_KEY, JSON.stringify(rooms));
     syncRoomDropdowns();
+    if (typeof renderDashboardRoomFilters === "function") {
+      renderDashboardRoomFilters();
+    }
   }
 
   function syncRoomDropdowns() {
@@ -5409,24 +5670,52 @@ document.addEventListener("DOMContentLoaded", () => {
     roomsGridContainer.querySelectorAll(".btn-room-off").forEach(btn => {
       btn.addEventListener("click", async () => {
         const roomName = btn.getAttribute("data-room");
+        const allDevs = getAllSystemDevices();
+        const devsInRoom = allDevs.filter(d => d.room === roomName);
+
+        if (devsInRoom.length === 0) {
+          showToast(`Không có thiết bị nào trong phòng "${roomName}"!`, "info");
+          return;
+        }
+
         showToast(`Đang tắt các thiết bị tại ${roomName}...`, "info");
+        const gwRoom = localStorage.getItem("gate_room") || "Phòng khách";
 
-        acState.power = 0;
-        updateAcModalUI();
-        await callApi("/api/hvac/control", "POST", { power: 0, temp: acState.temp, mode: acState.mode, fan: acState.fan });
+        // Tắt Điều hòa nếu AC hoặc Trạm IR thuộc phòng này
+        if (roomName === gwRoom || devsInRoom.some(d => d.type === "ac" || d.id === "dev_ir_hub_hunonic")) {
+          acState.power = 0;
+          updateAcModalUI();
+          await callApi("/api/hvac/control", "POST", { power: 0, temp: acState.temp, mode: acState.mode, fan: acState.fan });
+        }
 
-        relayStates[1] = 0;
-        await callApi("/api/gateway/relay/1", "POST", { state: 0 });
+        // Tắt các Relay nếu Trạm Gateway thuộc phòng này
+        if (roomName === gwRoom) {
+          relayStates[1] = 0;
+          relayStates[2] = 0;
+          await callApi("/api/gateway/relay/1", "POST", { state: 0 });
+          await callApi("/api/gateway/relay/2", "POST", { state: 0 });
+        }
+
+        // Tắt các thiết bị con khác
+        customDevices.forEach(d => {
+          if (d.room === roomName && (d.type === "relay" || d.type === "socket")) {
+            d.state = 0;
+          }
+        });
+        localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
         renderDevices();
         renderRoomsView();
+        if (typeof renderDashboardRoomFilters === "function") {
+          renderDashboardRoomFilters();
+        }
         showToast(`Đã tắt toàn bộ thiết bị tại ${roomName}!`, "success");
 
         if (typeof addSystemNotification === "function") {
           addSystemNotification({
             type: "device",
             title: `Tắt thiết bị tại ${roomName}`,
-            message: `Đã thực hiện tắt điều hòa và đèn chiếu sáng tại khu vực ${roomName}.`,
+            message: `Lệnh tắt phòng thực thi: Đã ngắt nguồn toàn bộ thiết bị đang hoạt động tại ${roomName}.`,
             badge: "Phòng"
           });
         }
@@ -5436,11 +5725,16 @@ document.addEventListener("DOMContentLoaded", () => {
     roomsGridContainer.querySelectorAll(".btn-room-explore").forEach(btn => {
       btn.addEventListener("click", () => {
         const roomName = btn.getAttribute("data-room");
+        selectedRoomFilter = roomName;
         closeHubSubView(true);
         window.location.hash = "";
-        const devSec = document.querySelector(".section-block");
-        if (devSec) devSec.scrollIntoView({ behavior: "smooth" });
-        showToast(`Đang hiển thị không gian: ${roomName}`, "info");
+        if (typeof renderDashboardRoomFilters === "function") {
+          renderDashboardRoomFilters();
+        }
+        renderDevices();
+        const filterBar = document.getElementById("dashboard-room-filters") || document.querySelector(".section-block");
+        if (filterBar) filterBar.scrollIntoView({ behavior: "smooth" });
+        showToast(`Đang lọc thiết bị: ${roomName}`, "info");
       });
     });
   }
@@ -6397,6 +6691,9 @@ document.addEventListener("DOMContentLoaded", () => {
   checkUrlHashRoute();
 
   // Khởi tạo ban đầu
+  if (typeof renderDashboardRoomFilters === "function") {
+    renderDashboardRoomFilters();
+  }
   renderDevices();
   renderFavoriteScenes();
   syncRoomDropdowns();

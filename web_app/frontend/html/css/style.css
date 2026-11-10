@@ -6790,3 +6790,111 @@ body {
   overflow: hidden;
 }
 
+/* ========================================================================== */
+/* ROOM FILTER CHIPS ON DASHBOARD                                             */
+/* ========================================================================== */
+.room-filter-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 14px 2px;
+  margin-bottom: 12px;
+  scrollbar-width: none;
+}
+
+.room-filter-chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.room-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(226, 232, 240, 0.95);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  user-select: none;
+}
+
+.room-filter-chip:hover {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.room-filter-chip.active {
+  background: #00b06f;
+  color: #ffffff;
+  border-color: #00b06f;
+  box-shadow: 0 4px 14px rgba(0, 176, 111, 0.35);
+}
+
+.room-filter-chip.active i {
+  color: #ffffff !important;
+}
+
+.room-filter-chip .chip-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.room-filter-chip.active .chip-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.empty-room-placeholder {
+  grid-column: 1 / -1;
+  padding: 48px 24px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  border: 1.5px dashed #cbd5e1;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.empty-room-placeholder i {
+  font-size: 2.2rem;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.empty-room-placeholder h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #334155;
+  margin: 0 0 6px 0;
+}
+
+.empty-room-placeholder p {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0;
+}
+
+
