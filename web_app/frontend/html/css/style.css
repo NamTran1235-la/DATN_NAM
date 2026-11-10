@@ -2424,6 +2424,30 @@ body {
   color: #ef4444;
 }
 
+.ota-cards-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 220px));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.ota-item-card {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  border: 1.5px solid #edf2f7;
+  user-select: none;
+}
+
+.ota-item-card:hover {
+  transform: translateY(-4px);
+  border-color: #00b06f;
+  box-shadow: 0 10px 24px rgba(0, 176, 111, 0.14);
+}
+
+.ota-item-card:active {
+  transform: scale(0.97);
+}
+
 .hunonic-card-bottom {
   margin-top: 14px;
 }

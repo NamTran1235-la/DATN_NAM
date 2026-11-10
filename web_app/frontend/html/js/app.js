@@ -4832,6 +4832,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const otaCardGw = document.getElementById("ota-card-gw");
   const otaCardNode = document.getElementById("ota-card-node");
 
+  // Two-Stage OTA Screens & Elements
+  const otaSelectionScreen = document.getElementById("ota-selection-screen");
+  const otaDetailScreen = document.getElementById("ota-detail-screen");
+  const btnOtaDetailBack = document.getElementById("btn-ota-detail-back");
+  const btnOtaHubRefresh = document.getElementById("btn-ota-hub-refresh");
+  const otaDetailHeaderTitle = document.getElementById("ota-detail-header-title");
+  const otaDetailHeaderSub = document.getElementById("ota-detail-header-sub");
+  const otaDetailHeaderIcon = document.getElementById("ota-detail-header-icon");
+  const otaTargetLockedIcon = document.getElementById("ota-target-locked-icon");
+  const otaTargetLockedText = document.getElementById("ota-target-locked-text");
+
   // Buttons & Inputs
   const otaFileVersionInput = document.getElementById("ota-file-version-input");
   const btnOtaUploadStart = document.getElementById("btn-ota-upload-start");
@@ -6293,8 +6304,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Mở màn hình cập nhật Firmware OTA
-  function openFirmwareView() {
+  // Mở màn hình cập nhật Firmware OTA (Giai đoạn 1: Màn hình chọn danh sách thiết bị)
+  function openFirmwareView(initialTarget = null) {
     currentHubView = null;
     const homeDash = document.getElementById("view-home-dashboard");
     const subView = document.getElementById("view-device-hub");
@@ -6309,35 +6320,101 @@ document.addEventListener("DOMContentLoaded", () => {
     if (viewFirmwareUpdate) viewFirmwareUpdate.style.display = "block";
 
     updateSidebarActive("nav-firmware");
+
+    const selScreen = document.getElementById("ota-selection-screen");
+    const detScreen = document.getElementById("ota-detail-screen");
+
+    if (initialTarget) {
+      openOtaDeviceView(initialTarget);
+    } else {
+      if (selScreen) selScreen.style.display = "block";
+      if (detScreen) detScreen.style.display = "none";
+      window.location.hash = "firmware";
+    }
+
     refreshOtaTelemetry();
-    loadAdminFirmwares();
-    window.location.hash = "firmware";
   }
 
-  // Chọn thiết bị mục tiêu (Gateway S3 vs Node C3)
+  // Mở màn hình nạp Firmware riêng của từng thiết bị (Giai đoạn 2: Chi tiết nạp OTA)
+  function openOtaDeviceView(target = "esp32s3_gate") {
+    const selScreen = document.getElementById("ota-selection-screen");
+    const detScreen = document.getElementById("ota-detail-screen");
+    if (selScreen) selScreen.style.display = "none";
+    if (detScreen) detScreen.style.display = "block";
+
+    setOtaTarget(target);
+    loadAdminFirmwares();
+    window.location.hash = `firmware/${target}`;
+  }
+
+  // Cấu hình giao diện và thông số theo thiết bị mục tiêu đang nạp
   function setOtaTarget(target) {
     currentOtaTarget = target;
-    if (target === "esp32s3_gate") {
-      if (btnSelectTargetGw) btnSelectTargetGw.classList.add("active");
-      if (btnSelectTargetNode) btnSelectTargetNode.classList.remove("active");
-      if (otaCardGw) otaCardGw.classList.add("ota-dev-card-active");
-      if (otaCardNode) otaCardNode.classList.remove("ota-dev-card-active");
-      const targetRadio = document.querySelector('input[name="ota_target_radio"][value="esp32s3_gate"]');
-      if (targetRadio) targetRadio.checked = true;
-      const targetText = document.getElementById("ota-progress-target-text");
-      if (targetText) targetText.innerHTML = '<i class="fa-solid fa-server"></i> Gateway ESP32-S3';
-      appendOtaLog("Đã chọn mục tiêu: Trạm Gateway ESP32-S3", "info");
-    } else {
-      if (btnSelectTargetNode) btnSelectTargetNode.classList.add("active");
-      if (btnSelectTargetGw) btnSelectTargetGw.classList.remove("active");
-      if (otaCardNode) otaCardNode.classList.add("ota-dev-card-active");
-      if (otaCardGw) otaCardGw.classList.remove("ota-dev-card-active");
-      const targetRadio = document.querySelector('input[name="ota_target_radio"][value="esp32c3_node"]');
-      if (targetRadio) targetRadio.checked = true;
-      const targetText = document.getElementById("ota-progress-target-text");
-      if (targetText) targetText.innerHTML = '<i class="fa-solid fa-microchip"></i> Node Cảm Biến C3';
-      appendOtaLog("Đã chọn mục tiêu: Node Cảm Biến C3 (ESP-NOW)", "info");
+    const isGw = (target === "esp32s3_gate");
+
+    // 1. Cập nhật Badge khóa thiết bị trong Form nạp
+    if (otaTargetLockedIcon) {
+      otaTargetLockedIcon.className = isGw ? "fa-solid fa-server" : "fa-solid fa-microchip";
     }
+    if (otaTargetLockedText) {
+      otaTargetLockedText.innerText = isGw ? "Trạm Gateway ESP32-S3" : "Node Cảm Biến C3";
+    }
+
+    // 2. Cập nhật Tiêu đề trang chi tiết
+    if (otaDetailHeaderIcon) {
+      otaDetailHeaderIcon.className = isGw ? "fa-solid fa-server" : "fa-solid fa-microchip";
+    }
+    if (otaDetailHeaderTitle) {
+      otaDetailHeaderTitle.innerText = isGw
+        ? "Cập Nhật Firmware - Trạm Gateway ESP32-S3"
+        : "Cập Nhật Firmware - Node Cảm Biến C3";
+    }
+    if (otaDetailHeaderSub) {
+      otaDetailHeaderSub.innerHTML = isGw
+        ? "Nâng cấp không dây cho Trạm Gateway ESP32-S3 &bull; Dual Boot Rollback"
+        : "Nâng cấp không dây cho Node cảm biến qua sóng ESP-NOW 2.4GHz";
+    }
+
+    // 3. Hiện đúng Spec Card của thiết bị đang nạp
+    if (otaCardGw) {
+      otaCardGw.style.display = isGw ? "block" : "none";
+      if (isGw) otaCardGw.classList.add("ota-dev-card-active");
+      else otaCardGw.classList.remove("ota-dev-card-active");
+    }
+    if (otaCardNode) {
+      otaCardNode.style.display = isGw ? "none" : "block";
+      if (!isGw) otaCardNode.classList.add("ota-dev-card-active");
+      else otaCardNode.classList.remove("ota-dev-card-active");
+    }
+
+    // 4. Ẩn nút Reboot nếu là Node C3 (chỉ Gateway hỗ trợ lệnh reboot trực tiếp)
+    if (btnOtaReboot) {
+      btnOtaReboot.style.display = isGw ? "inline-flex" : "none";
+    }
+
+    // 5. Đồng bộ input radio ẩn
+    const targetRadio = document.querySelector(`input[name="ota_target_radio"][value="${target}"]`);
+    if (targetRadio) targetRadio.checked = true;
+
+    // 6. Cập nhật thanh tiến trình text
+    const targetText = document.getElementById("ota-progress-target-text");
+    if (targetText) {
+      targetText.innerHTML = isGw
+        ? '<i class="fa-solid fa-server"></i> Gateway ESP32-S3'
+        : '<i class="fa-solid fa-microchip"></i> Node Cảm Biến C3';
+    }
+
+    // 7. Đồng bộ các nút chọn cũ nếu còn tồn tại
+    if (btnSelectTargetGw) {
+      if (isGw) btnSelectTargetGw.classList.add("active");
+      else btnSelectTargetGw.classList.remove("active");
+    }
+    if (btnSelectTargetNode) {
+      if (!isGw) btnSelectTargetNode.classList.add("active");
+      else btnSelectTargetNode.classList.remove("active");
+    }
+
+    appendOtaLog(isGw ? "Đã mở trang nạp: Trạm Gateway ESP32-S3" : "Đã mở trang nạp: Node Cảm Biến C3 (ESP-NOW)", "info");
   }
 
   // Ghi nhật ký vào console terminal
@@ -6381,6 +6458,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (nodeBat) nodeBat.innerText = `${res.node_battery ? res.node_battery.toFixed(2) : '3.30'} V`;
         const nodePkts = document.getElementById("ota-node-pkts-val");
         if (nodePkts) nodePkts.innerText = `${res.total_node_pkts || 0} pkts`;
+
+        // Telemetry trên thẻ Selection Grid (Màn hình chọn ban đầu)
+        const hubGwVer = document.getElementById("ota-hub-gw-ver");
+        if (hubGwVer) hubGwVer.innerText = `v${res.gateway_ver || "1.0.0"}`;
+        const hubGwUptime = document.getElementById("ota-hub-gw-uptime");
+        if (hubGwUptime) hubGwUptime.innerText = formatUptime(res.uptime_sec || 0);
+        const hubNodeVer = document.getElementById("ota-hub-node-ver");
+        if (hubNodeVer) hubNodeVer.innerText = `v${res.node_ver || "1.0.0"}`;
+        const hubNodeBat = document.getElementById("ota-hub-node-bat");
+        if (hubNodeBat) hubNodeBat.innerText = `${res.node_battery ? res.node_battery.toFixed(2) : '3.30'}V`;
 
         // Cập nhật trạng thái nạp nếu có
         if (res.ota && !otaPollInterval) {
@@ -6961,6 +7048,36 @@ document.addEventListener("DOMContentLoaded", () => {
     otaCardNode.addEventListener("click", () => setOtaTarget("esp32c3_node"));
   }
 
+  // Bấm vào thẻ thiết bị ở màn hình chọn (Stage 1) -> Mở màn hình nạp riêng của từng con (Stage 2)
+  document.querySelectorAll(".ota-item-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const target = card.getAttribute("data-ota-target") || "esp32s3_gate";
+      openOtaDeviceView(target);
+    });
+  });
+
+  // Nút quay lại từ màn hình nạp chi tiết về danh sách thiết bị
+  if (btnOtaDetailBack) {
+    btnOtaDetailBack.addEventListener("click", () => {
+      const selScreen = document.getElementById("ota-selection-screen");
+      const detScreen = document.getElementById("ota-detail-screen");
+      if (selScreen) selScreen.style.display = "block";
+      if (detScreen) detScreen.style.display = "none";
+      window.location.hash = "firmware";
+    });
+  }
+
+  // Nút làm mới trên màn hình chọn thiết bị ban đầu
+  if (btnOtaHubRefresh) {
+    btnOtaHubRefresh.addEventListener("click", () => {
+      const icon = document.getElementById("ota-hub-refresh-icon");
+      if (icon) icon.classList.add("fa-spin");
+      refreshOtaTelemetry().finally(() => {
+        if (icon) setTimeout(() => icon.classList.remove("fa-spin"), 400);
+      });
+    });
+  }
+
   // Tabs switcher: file vs URL
   if (otaTabFile && otaTabUrl) {
     otaTabFile.addEventListener("click", () => {
@@ -7040,8 +7157,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Kiểm tra hash trên URL khi vừa load trang
   function checkUrlHashRoute() {
-    if (window.location.hash === "#firmware" || window.location.hash === "#ota") {
-      openFirmwareView();
+    if (window.location.hash.startsWith("#firmware") || window.location.hash.startsWith("#ota")) {
+      if (window.location.hash.includes("esp32c3_node") || window.location.hash.includes("node")) {
+        openFirmwareView("esp32c3_node");
+      } else if (window.location.hash.includes("esp32s3_gate") || window.location.hash.includes("gateway")) {
+        openFirmwareView("esp32s3_gate");
+      } else {
+        openFirmwareView();
+      }
     } else if (window.location.hash === "#automations") {
       openAutomationsView();
     } else if (window.location.hash === "#notifications" || window.location.hash === "#notifs") {

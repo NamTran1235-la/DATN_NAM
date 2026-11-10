@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=96">
+  <link rel="stylesheet" href="css/style.css?v=97">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -114,22 +114,6 @@
           <button class="topbar-btn" title="Chế độ lưới">
             <i class="fa-solid fa-grip"></i>
           </button>
-
-          <!-- Home Selector Dropdown -->
-          <div class="home-dropdown-wrap">
-            <div class="home-dropdown-current" id="home-dropdown-trigger">
-              <span id="current-home-name">Căn Hộ Thông Minh (Phòng Khách)</span>
-              <i class="fa-solid fa-chevron-down arrow-icon"></i>
-            </div>
-            <div class="home-dropdown-menu hidden" id="home-dropdown-menu">
-              <div class="home-dropdown-item active" data-home="Căn Hộ Thông Minh (Phòng Khách)">Căn Hộ Thông Minh
-                (Phòng Khách)</div>
-              <div class="home-dropdown-item" data-home="Trạm Gateway ESP32-S3 (ICTU)">Trạm Gateway ESP32-S3 (ICTU)
-              </div>
-              <div class="home-dropdown-item" data-home="Phòng Nghiên Cứu IoT (Lab 302)">Phòng Nghiên Cứu IoT (Lab 302)
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="topbar-right">
@@ -370,35 +354,147 @@
         <!-- SUB-VIEW CHI TIẾT: CẬP NHẬT FIRMWARE TỪ XA QUA CLOUD (OTA)       -->
         <!-- ================================================================ -->
         <div id="view-firmware-update" class="hunonic-subview view-firmware-update" style="display: none;">
-          <!-- Top Header Bar -->
-          <div class="subview-header-bar">
-            <div class="subview-header-left">
-              <button type="button" class="btn-subview-back" id="btn-ota-back" title="Quay lại Trang chủ">
-                <i class="fa-solid fa-arrow-left"></i>
-              </button>
-              <div class="subview-title-group">
-                <span id="ota-header-icon-box"
-                  style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(0, 176, 111, 0.12); color: #00b06f; font-size: 1.15rem;">
-                  <i class="fa-solid fa-cloud-arrow-up"></i>
-                </span>
-                <div>
-                  <h3 class="subview-title" style="margin: 0; font-size: 1.15rem;">Cập Nhật Firmware (OTA)</h3>
-                  <div style="font-size: 0.78rem; color: #64748b; font-weight: 500;">Nâng cấp không dây cho Trạm Gateway
-                    ESP32-S3 &amp; Node ESP-NOW &bull; Dual Boot Rollback</div>
+          <!-- ============================================================ -->
+          <!-- 1. MÀN HÌNH CHỌN THIẾT BỊ OTA (COMPACT TIÊU CHUẨN)         -->
+          <!-- ============================================================ -->
+          <div id="ota-selection-screen">
+            <!-- Top Header Bar -->
+            <div class="subview-header-bar">
+              <div class="subview-header-left">
+                <button type="button" class="btn-subview-back" id="btn-ota-back" title="Quay lại Trang chủ">
+                  <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div class="subview-title-group">
+                  <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(0, 176, 111, 0.12); color: #00b06f; font-size: 1.15rem;">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                  </span>
+                  <div>
+                    <h3 class="subview-title" style="margin: 0; font-size: 1.15rem;">Cập Nhật Firmware (OTA)</h3>
+                    <div style="font-size: 0.78rem; color: #64748b; font-weight: 500;">Chọn thiết bị bạn muốn nâng cấp Firmware từ xa hoặc kiểm tra phiên bản</div>
+                  </div>
                 </div>
+              </div>
+
+              <div class="subview-header-right">
+                <button type="button" class="btn-subview-action" id="btn-ota-hub-refresh" title="Làm mới trạng thái">
+                  <i class="fa-solid fa-arrows-rotate" id="ota-hub-refresh-icon"></i> <span>Làm mới</span>
+                </button>
               </div>
             </div>
 
-            <div class="subview-header-right">
-              <button type="button" class="btn-subview-action" id="btn-ota-refresh" title="Làm mới trạng thái">
-                <i class="fa-solid fa-arrows-rotate" id="ota-refresh-icon"></i> <span>Làm mới</span>
-              </button>
-              <button type="button" class="btn-subview-gear" id="btn-ota-reboot" title="Khởi động lại Gateway từ xa"
-                style="color: #ef4444;">
-                <i class="fa-solid fa-power-off"></i>
-              </button>
+            <!-- Grid Thẻ Thiết Bị Chuẩn Compact như Ảnh 2 -->
+            <div class="ota-cards-selection-grid">
+              <!-- Card 1: Trạm Gateway ESP32-S3 -->
+              <div class="hunonic-card ota-item-card" data-ota-target="esp32s3_gate" title="Bấm vào để mở trang cập nhật Firmware cho Trạm Gateway">
+                <div class="hunonic-card-top" style="pointer-events: none;">
+                  <div class="hunonic-hex-icon">
+                    <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 2.5L35.5 11.45V29.35L20 38.3L4.5 29.35V11.45L20 2.5Z" fill="#00b06f"/>
+                      <path d="M12 16H28M12 20H28M12 24H28" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                  <div class="hunonic-card-top-right">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00b06f" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" class="wifi-icon-hunonic" id="ota-hub-gw-wifi-icon">
+                      <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                      <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                      <line x1="12" y1="20" x2="12.01" y2="20" stroke-width="3"></line>
+                    </svg>
+                  </div>
+                </div>
+                <div class="hunonic-card-bottom" style="pointer-events: none;">
+                  <div class="sensor-metric-row above-title">
+                    <span class="sensor-metric-chip" title="Phiên bản firmware">
+                      <i class="fa-solid fa-code-branch" style="color: #00b06f;"></i>
+                      <span id="ota-hub-gw-ver">v1.0.1</span>
+                    </span>
+                    <span class="sensor-metric-chip" title="Phân vùng active">
+                      <i class="fa-solid fa-hard-drive" style="color: #64748b;"></i>
+                      <span>ota_0</span>
+                    </span>
+                  </div>
+                  <h4 class="hunonic-card-title">Trạm Gateway ESP32-S3</h4>
+                  <div class="hunonic-card-sub on">
+                    <div class="sensor-status-row" style="color: #00b06f; font-weight: 600;">
+                      <i class="fa-solid fa-circle-arrow-up"></i> <span>Bấm để nạp OTA</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 2: Node Cảm Biến C3 -->
+              <div class="hunonic-card ota-item-card" data-ota-target="esp32c3_node" title="Bấm vào để mở trang cập nhật Firmware cho Node C3">
+                <div class="hunonic-card-top" style="pointer-events: none;">
+                  <div class="hunonic-hex-icon">
+                    <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 2.5L35.5 11.45V29.35L20 38.3L4.5 29.35V11.45L20 2.5Z" fill="#8b5cf6"/>
+                      <path d="M14 16C17.31 13 22.69 13 26 16M17 20C18.66 18.5 21.34 18.5 23 20M20 25A2 2 0 1 0 20 21A2 2 0 0 0 20 25Z" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                  <div class="hunonic-card-top-right">
+                    <span class="sensor-batt-pill" title="Pin Node"><i class="fa-solid fa-battery-full"></i> <span id="ota-hub-node-bat">3.30V</span></span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00b06f" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" class="wifi-icon-hunonic" id="ota-hub-node-wifi-icon">
+                      <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                      <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                      <line x1="12" y1="20" x2="12.01" y2="20" stroke-width="3"></line>
+                    </svg>
+                  </div>
+                </div>
+                <div class="hunonic-card-bottom" style="pointer-events: none;">
+                  <div class="sensor-metric-row above-title">
+                    <span class="sensor-metric-chip" title="Phiên bản firmware">
+                      <i class="fa-solid fa-code-branch" style="color: #8b5cf6;"></i>
+                      <span id="ota-hub-node-ver">v1.0.0</span>
+                    </span>
+                    <span class="sensor-metric-chip" title="Sóng">
+                      <i class="fa-solid fa-wifi" style="color: #64748b;"></i>
+                      <span>ESP-NOW</span>
+                    </span>
+                  </div>
+                  <h4 class="hunonic-card-title">Node Cảm Biến C3</h4>
+                  <div class="hunonic-card-sub on">
+                    <div class="sensor-status-row" style="color: #8b5cf6; font-weight: 600;">
+                      <i class="fa-solid fa-circle-arrow-up"></i> <span>Bấm để nạp OTA</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+
+          <!-- ============================================================ -->
+          <!-- 2. MÀN HÌNH NẠP FIRMWARE CHI TIẾT RIÊNG CỦA TỪNG THIẾT BỊ    -->
+          <!-- ============================================================ -->
+          <div id="ota-detail-screen" style="display: none;">
+            <!-- Top Header Bar -->
+            <div class="subview-header-bar">
+              <div class="subview-header-left">
+                <button type="button" class="btn-subview-back" id="btn-ota-detail-back" title="Quay lại danh sách thiết bị">
+                  <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div class="subview-title-group">
+                  <span id="ota-header-icon-box"
+                    style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(0, 176, 111, 0.12); color: #00b06f; font-size: 1.15rem;">
+                    <i class="fa-solid fa-server" id="ota-detail-header-icon"></i>
+                  </span>
+                  <div>
+                    <h3 class="subview-title" id="ota-detail-header-title" style="margin: 0; font-size: 1.15rem;">Cập Nhật Firmware - Trạm Gateway ESP32-S3</h3>
+                    <div id="ota-detail-header-sub" style="font-size: 0.78rem; color: #64748b; font-weight: 500;">Nâng cấp không dây cho Trạm Gateway ESP32-S3 &bull; Dual Boot Rollback</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="subview-header-right">
+                <button type="button" class="btn-subview-action" id="btn-ota-refresh" title="Làm mới trạng thái">
+                  <i class="fa-solid fa-arrows-rotate" id="ota-refresh-icon"></i> <span>Làm mới</span>
+                </button>
+                <button type="button" class="btn-subview-gear" id="btn-ota-reboot" title="Khởi động lại Gateway từ xa"
+                  style="color: #ef4444;">
+                  <i class="fa-solid fa-power-off"></i>
+                </button>
+              </div>
+            </div>
 
           <!-- 1. Grid Card Thông Tin Thiết Bị Hiện Tại -->
           <div class="ota-status-cards-row">
@@ -483,20 +579,16 @@
                 <span class="ota-badge-pill">Dual OTA Safe</span>
               </div>
 
-              <!-- Chọn thiết bị cần nạp -->
+              <!-- Thiết bị mục tiêu đang cập nhật (Khóa theo thiết bị đã chọn) -->
               <div class="ota-field-group" style="margin-bottom: 16px;">
                 <label class="ota-field-label">Thiết bị nhận bản cập nhật:</label>
-                <div class="ota-target-selector">
-                  <label class="ota-target-btn active" id="btn-select-target-gw">
-                    <input type="radio" name="ota_target_radio" value="esp32s3_gate" checked>
-                    <i class="fa-solid fa-server"></i>
-                    <span>Trạm Gateway ESP32-S3</span>
-                  </label>
-                  <label class="ota-target-btn" id="btn-select-target-node">
-                    <input type="radio" name="ota_target_radio" value="esp32c3_node">
-                    <i class="fa-solid fa-microchip"></i>
-                    <span>Node Cảm Biến C3</span>
-                  </label>
+                <div style="display: flex; align-items: center; justify-content: flex-start;">
+                  <div id="ota-target-locked-pill" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; padding: 7px 16px; border-radius: 99px; background: rgba(0, 176, 111, 0.1); color: #00b06f; border: 1px solid rgba(0, 176, 111, 0.25); font-size: 0.88rem;">
+                    <i class="fa-solid fa-server" id="ota-target-locked-icon"></i>
+                    <span id="ota-target-locked-text">Trạm Gateway ESP32-S3</span>
+                  </div>
+                  <input type="radio" name="ota_target_radio" value="esp32s3_gate" checked style="display: none;">
+                  <input type="radio" name="ota_target_radio" value="esp32c3_node" style="display: none;">
                 </div>
               </div>
 
@@ -670,6 +762,7 @@
             </div>
           </div>
         </div>
+      </div>
 
         <!-- ================================================================ -->
         <!-- VIEW 4: TỰ ĐỘNG HÓA THÔNG MINH (SMART AUTOMATIONS ENGINE)         -->
@@ -2157,7 +2250,7 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="js/app.js?v=96"></script>
+  <script src="js/app.js?v=97"></script>
 </body>
 
 </html>
