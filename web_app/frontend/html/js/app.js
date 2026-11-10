@@ -3173,6 +3173,22 @@ document.addEventListener("DOMContentLoaded", () => {
     navHomeBtn.addEventListener("click", (e) => {
       e.preventDefault();
       closeHubSubView(true);
+      window.location.hash = "";
+    });
+  }
+
+  const navRoomsBtn = document.getElementById("nav-rooms");
+  if (navRoomsBtn) {
+    navRoomsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      closeHubSubView(true);
+      window.location.hash = "";
+      updateSidebarActive("nav-rooms");
+      const devSection = document.querySelector(".section-block");
+      if (devSection) {
+        devSection.scrollIntoView({ behavior: "smooth" });
+      }
+      showToast("Đang hiển thị danh sách thiết bị theo Phòng khách", "info");
     });
   }
 
@@ -3181,6 +3197,7 @@ document.addEventListener("DOMContentLoaded", () => {
     brandLogoBox.style.cursor = "pointer";
     brandLogoBox.addEventListener("click", () => {
       closeHubSubView(true);
+      window.location.hash = "";
     });
   }
 

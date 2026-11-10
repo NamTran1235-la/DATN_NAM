@@ -2129,7 +2129,8 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.subview-header-bar {
+.subview-header-bar,
+.subview-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6193,15 +6194,15 @@ body {
 }
 
 .btn-notif-action {
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1.5px solid #cbd5e1;
   background: #ffffff;
-  color: #475569;
-  font-size: 0.8rem;
+  color: #334155;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -6210,19 +6211,21 @@ body {
 
 .btn-notif-action:hover {
   background: #f8fafc;
-  color: #1e293b;
+  color: #0f172a;
   border-color: #94a3b8;
+  transform: translateY(-1px);
 }
 
 .btn-notif-action.btn-notif-danger {
   color: #dc2626;
   border-color: #fecaca;
-  background: #fffafa;
+  background: #ffffff;
 }
 
 .btn-notif-action.btn-notif-danger:hover {
   background: #fee2e2;
   border-color: #ef4444;
+  color: #b91c1c;
 }
 
 /* Toolbar & Filter Tabs */

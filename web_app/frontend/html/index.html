@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="css/style.css?v=86">
+  <link rel="stylesheet" href="css/style.css?v=87">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -718,18 +718,20 @@
         <!-- SUB-VIEW: TRUNG TÂM THÔNG BÁO & CẢNH BÁO (NOTIFICATION CENTER)    -->
         <!-- ================================================================ -->
         <div id="view-notifications" class="hunonic-subview view-notifications" style="display: none;">
-          <!-- Header -->
-          <div class="subview-header">
+          <!-- Top Header Bar -->
+          <div class="subview-header-bar">
             <div class="subview-header-left">
               <button type="button" class="btn-subview-back" id="btn-notifs-back" title="Quay lại Trang chủ">
                 <i class="fa-solid fa-arrow-left"></i>
               </button>
-              <div class="subview-header-icon" style="background: #eff6ff; color: #2563eb;">
-                <i class="fa-regular fa-bell"></i>
-              </div>
-              <div>
-                <h2 class="subview-header-title">Trung tâm Thông báo</h2>
-                <div class="subview-header-subtitle">Nhật ký sự kiện, cảnh báo an toàn & lịch sử điều phối hệ thống</div>
+              <div class="subview-title-group">
+                <span id="notifs-header-icon-box" style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(37, 99, 235, 0.12); color: #2563eb; font-size: 1.15rem;">
+                  <i class="fa-regular fa-bell"></i>
+                </span>
+                <div>
+                  <h3 class="subview-title">Trung tâm Thông báo</h3>
+                  <div style="font-size: 0.78rem; color: #64748b; font-weight: 500;">Nhật ký sự kiện, cảnh báo an toàn &amp; lịch sử điều phối hệ thống</div>
+                </div>
               </div>
             </div>
             <div class="subview-header-right">
@@ -1747,6 +1749,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="js/app.js?v=86"></script>
+  <script src="js/app.js?v=87"></script>
 </body>
 </html>
