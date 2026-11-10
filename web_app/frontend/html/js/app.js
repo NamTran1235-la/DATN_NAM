@@ -3445,9 +3445,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function getStoredScenes() {
     try {
       const stored = localStorage.getItem("gate_user_scenes");
-      if (stored) {
+      if (stored !== null) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
     return DEFAULT_SCENES;
@@ -3464,25 +3464,42 @@ document.addEventListener("DOMContentLoaded", () => {
     const scenes = getStoredScenes();
     let html = "";
 
-    scenes.forEach(sc => {
-      const isCustom = !sc.isDefault;
-      html += `
-        <div class="scene-chip" data-scene-id="${escapeHtml(sc.id)}" title="Bấm để kích hoạt ngữ cảnh [${escapeHtml(sc.name)}]">
-          <i class="fa-solid ${escapeHtml(sc.icon || 'fa-wand-magic-sparkles')} chip-icon" style="color: ${escapeHtml(sc.color || '#00b06f')};"></i>
-          <div class="scene-chip-text">
-            <span class="scene-chip-name">${escapeHtml(sc.name)}</span>
-            <span class="scene-chip-sub">${sc.sub || 'Ngữ cảnh tùy chỉnh'}</span>
-          </div>
-          ${isCustom ? `
-            <button type="button" class="btn-scene-del" data-id="${escapeHtml(sc.id)}" title="Xóa ngữ cảnh này">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          ` : ''}
+    if (scenes.length === 0) {
+      html = `
+        <div style="display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px; background: rgba(255,255,255,0.88); backdrop-filter: blur(8px); border-radius: 999px; font-size: 0.8rem; color: #64748b; border: 1.5px dashed #cbd5e1;">
+          <span><i class="fa-solid fa-circle-info" style="color: #0284c7;"></i> Chưa có ngữ cảnh nào</span>
+          <button type="button" id="btn-restore-default-scenes" style="background: #0284c7; border: none; color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
+            <i class="fa-solid fa-rotate-left"></i> Khôi phục mặc định
+          </button>
         </div>
       `;
-    });
+    } else {
+      scenes.forEach(sc => {
+        html += `
+          <div class="scene-chip" data-scene-id="${escapeHtml(sc.id)}" title="Bấm để kích hoạt ngữ cảnh [${escapeHtml(sc.name)}]">
+            <i class="fa-solid ${escapeHtml(sc.icon || 'fa-wand-magic-sparkles')} chip-icon" style="color: ${escapeHtml(sc.color || '#00b06f')};"></i>
+            <div class="scene-chip-text">
+              <span class="scene-chip-name">${escapeHtml(sc.name)}</span>
+              <span class="scene-chip-sub">${sc.sub || 'Ngữ cảnh tùy chỉnh'}</span>
+            </div>
+            <button type="button" class="btn-scene-del" data-id="${escapeHtml(sc.id)}" data-name="${escapeHtml(sc.name)}" title="Xóa ngữ cảnh [${escapeHtml(sc.name)}]">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+      });
+    }
 
     container.innerHTML = html;
+
+    const btnRestore = container.querySelector("#btn-restore-default-scenes");
+    if (btnRestore) {
+      btnRestore.addEventListener("click", () => {
+        saveStoredScenes(DEFAULT_SCENES);
+        renderFavoriteScenes();
+        showToast("Đã khôi phục các ngữ cảnh mặc định!", "success");
+      });
+    }
 
     container.querySelectorAll(".scene-chip").forEach(chip => {
       chip.addEventListener("click", async (e) => {
@@ -3497,15 +3514,19 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const sId = btn.getAttribute("data-id");
-        if (confirm("Bạn có chắc chắn muốn xóa ngữ cảnh này?")) {
+        const sName = btn.getAttribute("data-name") || "ngữ cảnh này";
+        if (confirm(`Bạn có chắc chắn muốn xóa ngữ cảnh "${sName}" không?`)) {
           const filtered = getStoredScenes().filter(s => s.id !== sId);
           saveStoredScenes(filtered);
           renderFavoriteScenes();
-          showToast("Đã xóa ngữ cảnh!", "info");
+          showToast(`Đã xóa ngữ cảnh [${sName}]!`, "info");
         }
       });
     });
   }
+  window.getStoredScenes = getStoredScenes;
+  window.saveStoredScenes = saveStoredScenes;
+  window.renderFavoriteScenes = renderFavoriteScenes;
 
   async function executeScene(sc, chipEl = null) {
     if (chipEl) {
