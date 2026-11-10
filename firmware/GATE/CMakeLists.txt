@@ -9,6 +9,6 @@ set(EXTRA_COMPONENT_DIRS
     "third_party"
 )
 
-set(PROJECT_VER "1.0.0")
+set(PROJECT_VER "1.0.1")
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(gate_firmware)

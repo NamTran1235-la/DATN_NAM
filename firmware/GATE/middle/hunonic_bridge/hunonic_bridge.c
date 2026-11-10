@@ -479,7 +479,8 @@ esp_err_t hunonic_bridge_sync_devices(void) {
                       "& da thiet bi khac ra...");
 
         if (hunonic_http_login(s_phone, s_password) == ESP_OK) {
-          ESP_LOGI(TAG, "Re-login thanh cong, thu dong bo lai voi token moi...");
+          ESP_LOGI(TAG, "Re-login thanh cong, cap nhat WebSocket voi token moi...");
+          hunonic_ws_start();
           continue;
         }
       }
@@ -738,17 +739,14 @@ esp_err_t hunonic_bridge_sync_devices(void) {
   }
   ESP_LOGI(TAG, "Dong bo hoan tat: tim thay %d dieu hoa", s_ac_count);
 
-  if (s_is_ws_connected) {
+  if (s_is_ws_connected && s_ws_client && esp_websocket_client_is_connected(s_ws_client)) {
     hunonic_ws_subscribe_all();
-  } else if (!s_ws_client) {
-    /* A later periodic sync can recover a failed first login without rebooting. */
+  } else {
+    /* Tu dong hoi phuc: Neu WebSocket bi ngat ket noi qua dem hoac doi token -> Khoi dong lai */
+    ESP_LOGW(TAG, "Phat hien WebSocket chua ket noi (is_ws=%d). Tu dong ket noi lai WebSocket Hunonic...", s_is_ws_connected);
     esp_err_t ws_err = hunonic_ws_start();
     if (ws_err != ESP_OK) {
-      ESP_LOGE(TAG, "Khoi dong WebSocket sau khi sync that bai: %d", ws_err);
-      s_last_sync_error = ws_err;
-      s_last_sync_http_status = 200;
-      xSemaphoreGive(s_hunonic_io_mutex);
-      return ws_err;
+      ESP_LOGE(TAG, "Tu dong ket noi lai WebSocket that bai: %d", ws_err);
     }
   }
   xSemaphoreGive(s_hunonic_io_mutex);
@@ -1190,6 +1188,7 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base,
 
   case WEBSOCKET_EVENT_ERROR:
     ESP_LOGE(TAG, "WebSocket Hunonic bao loi!");
+    s_is_ws_connected = false;
     break;
   }
 }
@@ -1206,33 +1205,55 @@ static esp_err_t hunonic_ws_start(void) {
       .crt_bundle_attach = esp_crt_bundle_attach,
       .reconnect_timeout_ms = 5000,
       .network_timeout_ms = 10000,
+      .ping_interval_sec = 15,
+      .pingpong_timeout_sec = 45,
+      .keep_alive_enable = true,
+      .keep_alive_idle = 15,
+      .keep_alive_interval = 5,
+      .keep_alive_count = 3,
       .task_stack = 10240,
   };
+
+  s_is_ws_connected = false;
 
   if (s_ws_client) {
     esp_websocket_client_stop(s_ws_client);
     esp_websocket_client_destroy(s_ws_client);
+    s_ws_client = NULL;
   }
 
   s_ws_client = esp_websocket_client_init(&ws_cfg);
+  if (!s_ws_client) {
+    ESP_LOGE(TAG, "esp_websocket_client_init that bai");
+    return ESP_FAIL;
+  }
+
   esp_websocket_register_events(s_ws_client, WEBSOCKET_EVENT_ANY,
                                 websocket_event_handler, NULL);
-  return esp_websocket_client_start(s_ws_client);
+  esp_err_t err = esp_websocket_client_start(s_ws_client);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "esp_websocket_client_start that bai: %d", err);
+    esp_websocket_client_destroy(s_ws_client);
+    s_ws_client = NULL;
+    return err;
+  }
+  return ESP_OK;
 }
 
 esp_err_t hunonic_bridge_control(const char *device_id, int power, int temp,
                                  int mode, int fan) {
-  if (!s_is_ws_connected || !s_ws_client) {
-    ESP_LOGW(TAG, "WebSocket dang ket noi/khoi tao lai, cho toi da 2.5s...");
-    for (int retry = 0; retry < 25; retry++) {
+  if (!s_is_ws_connected || !s_ws_client || !esp_websocket_client_is_connected(s_ws_client)) {
+    ESP_LOGW(TAG, "WebSocket chua ket noi. Dang chu dong ket noi lai de gui lenh...");
+    hunonic_ws_start();
+    for (int retry = 0; retry < 35; retry++) {
       vTaskDelay(pdMS_TO_TICKS(100));
-      if (s_is_ws_connected && s_ws_client) {
+      if (s_is_ws_connected && s_ws_client && esp_websocket_client_is_connected(s_ws_client)) {
         break;
       }
     }
   }
 
-  if (!s_is_ws_connected || !s_ws_client) {
+  if (!s_is_ws_connected || !s_ws_client || !esp_websocket_client_is_connected(s_ws_client)) {
     ESP_LOGE(TAG, "WebSocket chua ket noi, khong the gui lenh");
     return ESP_ERR_INVALID_STATE;
   }
@@ -1474,7 +1495,7 @@ esp_err_t hunonic_bridge_init(const char *phone, const char *password) {
     return err;
   }
 
-  if (!s_ws_client) {
+  if (!s_ws_client || !s_is_ws_connected || !esp_websocket_client_is_connected(s_ws_client)) {
     err = hunonic_ws_start();
     if (err != ESP_OK) {
       ESP_LOGE(TAG, "Khoi dong WebSocket client that bai: %d", err);
@@ -1488,8 +1509,10 @@ esp_err_t hunonic_bridge_init(const char *phone, const char *password) {
 esp_err_t hunonic_bridge_stop(void) {
   s_is_ws_connected = false;
   if (s_ws_client) {
-    ESP_LOGI(TAG, "Tam dung WebSocket Hunonic Bridge (cho ket noi lai Wi-Fi)...");
+    ESP_LOGI(TAG, "Dung va giai phong WebSocket Hunonic Bridge (cho ket noi lai Wi-Fi)...");
     esp_websocket_client_stop(s_ws_client);
+    esp_websocket_client_destroy(s_ws_client);
+    s_ws_client = NULL;
   }
   return ESP_OK;
 }
