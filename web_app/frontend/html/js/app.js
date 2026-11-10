@@ -2563,7 +2563,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const val2Icon = isPressure ? "fa-gauge-high" : "fa-droplet";
     const val2Color = isPressure ? "#0284c7" : "#0ea5e9";
     const val2Unit = isPressure ? "hPa" : "%";
-    const val2Val = (sensorData.hasData && sensorData.hum > 0) ? `${sensorData.hum.toFixed(1)} ${val2Unit}` : `-- ${val2Unit}`;
+    const val2Val = (sensorData.hasData && sensorData.hum > 0) ? `${isPressure ? Math.round(sensorData.hum) : sensorData.hum.toFixed(1)} ${val2Unit}` : `-- ${val2Unit}`;
 
     const known = sensorData.hasData && [true, false, 0, 1, "0", "1"].includes(sensorData.presence);
     const occupied = known && (sensorData.presence === true || Number(sensorData.presence) === 1);
