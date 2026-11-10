@@ -2779,6 +2779,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   }
+  window.renderDashboardRoomFilters = renderDashboardRoomFilters;
+  window.renderDevices = renderDevices;
 
   function renderDevices() {
     foundHub = getActiveIrHub();
@@ -4677,6 +4679,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   }
+  window.evaluateAutomationRules = evaluateAutomationRules;
 
   const DEFAULT_AUTOMATIONS = [
     {
