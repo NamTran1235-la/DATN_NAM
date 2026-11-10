@@ -3528,12 +3528,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (acts.relay1 !== undefined && acts.relay1 >= 0) {
       relayStates[1] = acts.relay1;
-      await callApi("/api/gateway/relay/1", "POST", { state: acts.relay1 });
+      await callApi("/api/gateway/relay", "POST", { channel: 1, state: acts.relay1 });
     }
 
     if (acts.relay2 !== undefined && acts.relay2 >= 0) {
       relayStates[2] = acts.relay2;
-      await callApi("/api/gateway/relay/2", "POST", { state: acts.relay2 });
+      await callApi("/api/gateway/relay", "POST", { channel: 2, state: acts.relay2 });
     }
 
     renderDevices();
@@ -4657,12 +4657,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (acts.relay1 !== undefined && acts.relay1 >= 0) {
           relayStates[1] = acts.relay1;
-          callApi("/api/gateway/relay/1", "POST", { state: acts.relay1 }).catch(err => console.error("Auto R1 err:", err));
+          callApi("/api/gateway/relay", "POST", { channel: 1, state: acts.relay1 }).catch(err => console.error("Auto R1 err:", err));
         }
 
         if (acts.relay2 !== undefined && acts.relay2 >= 0) {
           relayStates[2] = acts.relay2;
-          callApi("/api/gateway/relay/2", "POST", { state: acts.relay2 }).catch(err => console.error("Auto R2 err:", err));
+          callApi("/api/gateway/relay", "POST", { channel: 2, state: acts.relay2 }).catch(err => console.error("Auto R2 err:", err));
         }
 
         renderDevices();
@@ -4871,11 +4871,11 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           if (acts.relay1 !== undefined && acts.relay1 >= 0) {
             relayStates[1] = acts.relay1;
-            await callApi("/api/gateway/relay/1", "POST", { state: acts.relay1 });
+            await callApi("/api/gateway/relay", "POST", { channel: 1, state: acts.relay1 });
           }
           if (acts.relay2 !== undefined && acts.relay2 >= 0) {
             relayStates[2] = acts.relay2;
-            await callApi("/api/gateway/relay/2", "POST", { state: acts.relay2 });
+            await callApi("/api/gateway/relay", "POST", { channel: 2, state: acts.relay2 });
           }
           renderDevices();
         }
@@ -5695,8 +5695,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (roomName === gwRoom) {
           relayStates[1] = 0;
           relayStates[2] = 0;
-          await callApi("/api/gateway/relay/1", "POST", { state: 0 });
-          await callApi("/api/gateway/relay/2", "POST", { state: 0 });
+          await callApi("/api/gateway/relay", "POST", { channel: 1, state: 0 });
+          await callApi("/api/gateway/relay", "POST", { channel: 2, state: 0 });
         }
 
         // Tắt các thiết bị con khác

@@ -125,6 +125,21 @@ def control_relay(
     )
 
 @router.post(
+    "/relay/{channel}",
+    response_model=GatewayCommandResponse,
+    summary="Điều khiển Bật / Tắt Relay theo Channel URL",
+    description="Gửi lệnh điều khiển ngõ ra Relay kênh 1 hoặc kênh 2."
+)
+def control_relay_path(
+    channel: int,
+    req: dict = None,
+    current_user: dict = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    state = req.get("state", 0) if isinstance(req, dict) else 0
+    return control_relay(RelayControlRequest(channel=channel, state=state), current_user, session)
+
+@router.post(
     "/reboot",
     response_model=GatewayCommandResponse,
     summary="Khởi động lại Trạm Gateway từ xa",
