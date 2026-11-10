@@ -1093,10 +1093,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return DEFAULT_BRAND_PROFILES[104];
   }
 
-  // ── HÀM LẤY GIỚI HẠN NHIỆT ĐỘ THEO TỪNG THƯƠNG HIỆU ĐIỀU HÒA (BRAND) ─────
+  // ── HÀM LẤY GIỚI HẠN NHIỆT ĐỘ (KẾT HỢP CẤU HÌNH NGƯỜI DÙNG & PHẦN CỨNG) ───
   function getAcTempLimits(dev) {
     const cap = getAcCapabilities(dev);
-    return { min: cap.temp_min, max: cap.temp_max, brand: cap.brand, brandName: cap.brandName };
+    const custom = (typeof getAcLimitsFor === "function" && dev && dev.id) ? getAcLimitsFor(dev.id) : null;
+    const min = custom && custom.min ? Math.max(cap.temp_min, custom.min) : cap.temp_min;
+    const max = custom && custom.max ? Math.min(cap.temp_max, custom.max) : cap.temp_max;
+    return { min, max, brand: cap.brand, brandName: cap.brandName };
   }
 
   // ── CẬP NHẬT GIAO DIỆN ĐIỀU HÒA TRONG DRAWER ──────────────────────────────
@@ -6927,6 +6930,422 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.addEventListener("hashchange", checkUrlHashRoute);
   checkUrlHashRoute();
+
+  // ==============================================================================
+  // CÀI ĐẶT NÂNG CAO ĐIỀU HÒA (GIỚI HẠN NHIỆT ĐỘ & HẸN GIỜ TRÊN NAV BÊN TRÁI)
+  // ==============================================================================
+  function getStoredAcLimits() {
+    try {
+      const saved = localStorage.getItem("gate_ac_limits");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {};
+  }
+
+  function saveStoredAcLimits(limits) {
+    localStorage.setItem("gate_ac_limits", JSON.stringify(limits));
+  }
+
+  function getAcLimitsFor(devId) {
+    if (!devId) return { min: 16, max: 30 };
+    const all = getStoredAcLimits();
+    return all[String(devId)] || { min: 16, max: 30 };
+  }
+
+  function getStoredAcTimers() {
+    try {
+      const saved = localStorage.getItem("gate_ac_timers");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  }
+
+  function saveStoredAcTimers(timers) {
+    localStorage.setItem("gate_ac_timers", JSON.stringify(timers));
+  }
+
+  const acLeftDrawer = document.getElementById("ac-left-drawer");
+  const acLeftDrawerOverlay = document.getElementById("ac-left-drawer-overlay");
+  const btnCloseAcLeftDrawer = document.getElementById("btn-close-ac-left-drawer");
+  const acLeftDevName = document.getElementById("ac-left-dev-name");
+  const acLeftDevSub = document.getElementById("ac-left-dev-sub");
+
+  const valLimitMin = document.getElementById("val-limit-min");
+  const valLimitMax = document.getElementById("val-limit-max");
+  const btnLimitMinMinus = document.getElementById("btn-limit-min-minus");
+  const btnLimitMinPlus = document.getElementById("btn-limit-min-plus");
+  const btnLimitMaxMinus = document.getElementById("btn-limit-max-minus");
+  const btnLimitMaxPlus = document.getElementById("btn-limit-max-plus");
+  const btnSaveAcLimits = document.getElementById("btn-save-ac-limits");
+
+  const tabTimerOff = document.getElementById("tab-timer-off");
+  const tabTimerOn = document.getElementById("tab-timer-on");
+  const panelTimerOff = document.getElementById("panel-timer-off");
+  const panelTimerOn = document.getElementById("panel-timer-on");
+  const inputTimerOffTime = document.getElementById("input-timer-off-time");
+  const inputTimerOnTime = document.getElementById("input-timer-on-time");
+  const inputTimerOnTemp = document.getElementById("input-timer-on-temp");
+  const selectTimerOnMode = document.getElementById("select-timer-on-mode");
+  const btnSubmitTimer = document.getElementById("btn-submit-timer");
+  const activeTimersWrap = document.getElementById("active-timers-wrap");
+  const activeTimersList = document.getElementById("active-timers-list");
+
+  let currentLeftDrawerAc = null;
+  let currentTimerMode = "off";
+  let leftDrawerMinTemp = 20;
+  let leftDrawerMaxTemp = 28;
+  let selectedCountdownMin = 0;
+
+  function openAcLeftDrawer(acDev) {
+    if (!acDev) return;
+    currentLeftDrawerAc = acDev;
+    if (acLeftDevName) acLeftDevName.innerText = acDev.name || `Điều hòa ${acDev.id}`;
+    if (acLeftDevSub) acLeftDevSub.innerText = `${acDev.brand_name || 'Hunonic IR'} • ID: ${acDev.id}`;
+
+    const limits = getAcLimitsFor(acDev.id);
+    leftDrawerMinTemp = limits.min || 20;
+    leftDrawerMaxTemp = limits.max || 28;
+    if (valLimitMin) valLimitMin.innerText = `${leftDrawerMinTemp}°C`;
+    if (valLimitMax) valLimitMax.innerText = `${leftDrawerMaxTemp}°C`;
+
+    document.querySelectorAll(".timer-chip-btn").forEach(b => b.classList.remove("active"));
+    selectedCountdownMin = 0;
+    if (inputTimerOffTime) inputTimerOffTime.value = "";
+    if (inputTimerOnTime) inputTimerOnTime.value = "";
+
+    renderActiveTimersList();
+
+    if (acLeftDrawer) acLeftDrawer.classList.remove("hidden");
+    if (acLeftDrawerOverlay) acLeftDrawerOverlay.classList.remove("hidden");
+  }
+
+  function closeAcLeftDrawer() {
+    if (acLeftDrawer) acLeftDrawer.classList.add("hidden");
+    if (acLeftDrawerOverlay) acLeftDrawerOverlay.classList.add("hidden");
+  }
+
+  if (btnCloseAcLeftDrawer) btnCloseAcLeftDrawer.addEventListener("click", closeAcLeftDrawer);
+  if (acLeftDrawerOverlay) acLeftDrawerOverlay.addEventListener("click", closeAcLeftDrawer);
+
+  if (btnLimitMinMinus) {
+    btnLimitMinMinus.onclick = () => {
+      if (leftDrawerMinTemp > 16) {
+        leftDrawerMinTemp--;
+        if (valLimitMin) valLimitMin.innerText = `${leftDrawerMinTemp}°C`;
+      }
+    };
+  }
+  if (btnLimitMinPlus) {
+    btnLimitMinPlus.onclick = () => {
+      if (leftDrawerMinTemp < leftDrawerMaxTemp - 1) {
+        leftDrawerMinTemp++;
+        if (valLimitMin) valLimitMin.innerText = `${leftDrawerMinTemp}°C`;
+      }
+    };
+  }
+  if (btnLimitMaxMinus) {
+    btnLimitMaxMinus.onclick = () => {
+      if (leftDrawerMaxTemp > leftDrawerMinTemp + 1) {
+        leftDrawerMaxTemp--;
+        if (valLimitMax) valLimitMax.innerText = `${leftDrawerMaxTemp}°C`;
+      }
+    };
+  }
+  if (btnLimitMaxPlus) {
+    btnLimitMaxPlus.onclick = () => {
+      if (leftDrawerMaxTemp < 32) {
+        leftDrawerMaxTemp++;
+        if (valLimitMax) valLimitMax.innerText = `${leftDrawerMaxTemp}°C`;
+      }
+    };
+  }
+
+  if (btnSaveAcLimits) {
+    btnSaveAcLimits.onclick = () => {
+      if (!currentLeftDrawerAc) return;
+      const allLimits = getStoredAcLimits();
+      allLimits[String(currentLeftDrawerAc.id)] = {
+        min: leftDrawerMinTemp,
+        max: leftDrawerMaxTemp
+      };
+      saveStoredAcLimits(allLimits);
+      showToast(`Đã lưu giới hạn nhiệt độ (${leftDrawerMinTemp}°C - ${leftDrawerMaxTemp}°C) cho [${currentLeftDrawerAc.name}]!`, "success");
+      if (typeof updateDrawerAcUI === "function") {
+        updateDrawerAcUI(currentLeftDrawerAc);
+      }
+    };
+  }
+
+  if (tabTimerOff) {
+    tabTimerOff.onclick = () => {
+      currentTimerMode = "off";
+      tabTimerOff.classList.add("active");
+      if (tabTimerOn) tabTimerOn.classList.remove("active");
+      if (panelTimerOff) panelTimerOff.style.display = "block";
+      if (panelTimerOn) panelTimerOn.style.display = "none";
+    };
+  }
+  if (tabTimerOn) {
+    tabTimerOn.onclick = () => {
+      currentTimerMode = "on";
+      tabTimerOn.classList.add("active");
+      if (tabTimerOff) tabTimerOff.classList.remove("active");
+      if (panelTimerOff) panelTimerOff.style.display = "none";
+      if (panelTimerOn) panelTimerOn.style.display = "block";
+    };
+  }
+
+  document.querySelectorAll(".timer-chip-btn").forEach(chip => {
+    chip.onclick = () => {
+      document.querySelectorAll(".timer-chip-btn").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      selectedCountdownMin = parseInt(chip.getAttribute("data-minutes")) || 0;
+      if (inputTimerOffTime) inputTimerOffTime.value = "";
+    };
+  });
+
+  if (inputTimerOffTime) {
+    inputTimerOffTime.onchange = () => {
+      document.querySelectorAll(".timer-chip-btn").forEach(c => c.classList.remove("active"));
+      selectedCountdownMin = 0;
+    };
+  }
+
+  if (btnSubmitTimer) {
+    btnSubmitTimer.onclick = () => {
+      if (!currentLeftDrawerAc) {
+        showToast("Chưa chọn điều hòa!", "error");
+        return;
+      }
+
+      let targetTimestamp = 0;
+      let label = "";
+
+      if (currentTimerMode === "off") {
+        if (selectedCountdownMin > 0) {
+          targetTimestamp = Date.now() + selectedCountdownMin * 60 * 1000;
+          const targetDate = new Date(targetTimestamp);
+          const hh = String(targetDate.getHours()).padStart(2, "0");
+          const mm = String(targetDate.getMinutes()).padStart(2, "0");
+          label = `Tắt sau ${selectedCountdownMin} phút (lúc ${hh}:${mm})`;
+        } else if (inputTimerOffTime && inputTimerOffTime.value) {
+          const [h, m] = inputTimerOffTime.value.split(":").map(Number);
+          const targetDate = new Date();
+          targetDate.setHours(h, m, 0, 0);
+          if (targetDate.getTime() <= Date.now()) {
+            targetDate.setDate(targetDate.getDate() + 1);
+          }
+          targetTimestamp = targetDate.getTime();
+          label = `Tắt vào lúc ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+        } else {
+          showToast("Vui lòng chọn thời gian tắt!", "warning");
+          return;
+        }
+      } else {
+        if (!inputTimerOnTime || !inputTimerOnTime.value) {
+          showToast("Vui lòng chọn giờ bật điều hòa!", "warning");
+          return;
+        }
+        const [h, m] = inputTimerOnTime.value.split(":").map(Number);
+        const targetDate = new Date();
+        targetDate.setHours(h, m, 0, 0);
+        if (targetDate.getTime() <= Date.now()) {
+          targetDate.setDate(targetDate.getDate() + 1);
+        }
+        targetTimestamp = targetDate.getTime();
+        const onTemp = Number(inputTimerOnTemp ? inputTimerOnTemp.value : 25);
+        label = `Bật lúc ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} (${onTemp}°C)`;
+      }
+
+      const newTimer = {
+        id: "timer_" + Date.now(),
+        devId: String(currentLeftDrawerAc.id),
+        devName: currentLeftDrawerAc.name || `Điều hòa ${currentLeftDrawerAc.id}`,
+        type: currentTimerMode,
+        targetTime: targetTimestamp,
+        params: currentTimerMode === "off" ? { power: 0 } : {
+          power: 1,
+          temp: Number(inputTimerOnTemp ? inputTimerOnTemp.value : 25),
+          mode: Number(selectTimerOnMode ? selectTimerOnMode.value : 1),
+          fan: 0
+        },
+        label
+      };
+
+      const timers = getStoredAcTimers();
+      timers.push(newTimer);
+      saveStoredAcTimers(timers);
+      renderActiveTimersList();
+      showToast(`Đã kích hoạt hẹn giờ: ${label}!`, "success");
+    };
+  }
+
+  function renderActiveTimersList() {
+    if (!activeTimersWrap || !activeTimersList) return;
+    const timers = getStoredAcTimers();
+    const acTimers = currentLeftDrawerAc ? timers.filter(t => t.devId === String(currentLeftDrawerAc.id)) : timers;
+
+    if (acTimers.length === 0) {
+      activeTimersWrap.style.display = "none";
+      activeTimersList.innerHTML = "";
+      return;
+    }
+
+    activeTimersWrap.style.display = "block";
+    let html = "";
+    const now = Date.now();
+
+    acTimers.forEach(t => {
+      const remainingMs = Math.max(0, t.targetTime - now);
+      const remainingMin = Math.ceil(remainingMs / 60000);
+      const remainText = remainingMin > 60 ? `${Math.floor(remainingMin / 60)}g ${remainingMin % 60}p` : `${remainingMin} phút`;
+
+      html += `
+        <div class="active-timer-item">
+          <div>
+            <strong style="color: ${t.type === 'off' ? '#0f172a' : '#00b06f'};">${escapeHtml(t.label)}</strong>
+            <span style="font-size: 0.72rem; color: #64748b; display: block;">Còn ~${remainText} nữa</span>
+          </div>
+          <button type="button" class="btn-cancel-single-timer" data-timer-id="${escapeHtml(t.id)}" title="Hủy hẹn giờ này">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      `;
+    });
+
+    activeTimersList.innerHTML = html;
+
+    activeTimersList.querySelectorAll(".btn-cancel-single-timer").forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const tId = btn.getAttribute("data-timer-id");
+        const remaining = getStoredAcTimers().filter(t => t.id !== tId);
+        saveStoredAcTimers(remaining);
+        renderActiveTimersList();
+        showToast("Đã hủy lệnh hẹn giờ!", "info");
+      };
+    });
+  }
+
+  function checkActiveAcTimers() {
+    const timers = getStoredAcTimers();
+    if (timers.length === 0) return;
+
+    const now = Date.now();
+    const remaining = [];
+
+    timers.forEach(t => {
+      if (now >= t.targetTime) {
+        const apiRunner = (typeof window !== "undefined" && window.callApi) ? window.callApi : callApi;
+        apiRunner("/api/hvac/control", "POST", {
+          device_id: t.devId,
+          power: t.params.power,
+          temp: t.params.temp || 25,
+          mode: t.params.mode || 1,
+          fan: t.params.fan || 0
+        }).catch(err => console.error("Timer trigger err:", err));
+
+        showToast(`⏰ HẸN GIỜ: Đã ${t.params.power === 1 ? 'BẬT' : 'TẮT'} [${t.devName}] thành công!`, "success", 5000);
+        if (typeof addSystemNotification === "function") {
+          addSystemNotification({
+            type: "automation",
+            title: `Hẹn giờ hoàn tất: ${t.devName}`,
+            message: `Đã tự động ${t.params.power === 1 ? 'BẬT' : 'TẮT'} điều hòa theo lịch hẹn (${t.label}).`,
+            badge: "Hẹn giờ"
+          });
+        }
+      } else {
+        remaining.push(t);
+      }
+    });
+
+    if (remaining.length !== timers.length) {
+      saveStoredAcTimers(remaining);
+      renderActiveTimersList();
+    }
+  }
+  setInterval(checkActiveAcTimers, 5000);
+
+  // ── CONTROLLER GIỮ 5 GIÂY VÀO ITEM ĐIỀU HÒA ĐỂ MỞ NAV TRÁI ────────────────
+  let globalHoldTimer = null;
+  let globalHoldBar = null;
+  let globalHoldTriggered = false;
+
+  function initGlobalAcLongPress() {
+    function startHold(e) {
+      const card = e.target.closest(".subview-ac-card, .scene-ac-card, [data-child-id]");
+      if (!card) return;
+      if (e.button && e.button !== 0) return;
+
+      const acId = card.getAttribute("data-child-id") || card.getAttribute("data-ac-id");
+      if (!acId) return;
+
+      globalHoldTriggered = false;
+
+      card.querySelectorAll(".ac-hold-progress-bar").forEach(b => b.remove());
+      globalHoldBar = document.createElement("div");
+      globalHoldBar.className = "ac-hold-progress-bar";
+      card.style.position = "relative";
+      card.appendChild(globalHoldBar);
+
+      setTimeout(() => {
+        if (globalHoldBar) globalHoldBar.style.width = "100%";
+      }, 20);
+
+      globalHoldTimer = setTimeout(() => {
+        globalHoldTriggered = true;
+        if (globalHoldBar) {
+          globalHoldBar.remove();
+          globalHoldBar = null;
+        }
+
+        const allAcs = getAllAvailableAcs();
+        const acObj = allAcs.find(a => String(a.id) === String(acId)) || {
+          id: acId,
+          name: card.querySelector(".hunonic-card-title, strong") ? card.querySelector(".hunonic-card-title, strong").innerText : `Điều hòa ${acId}`
+        };
+        openAcLeftDrawer(acObj);
+        showToast(`Đã mở Cài đặt nâng cao: [${acObj.name}]`, "info");
+      }, 5000);
+    }
+
+    function cancelHold() {
+      if (globalHoldTimer) {
+        clearTimeout(globalHoldTimer);
+        globalHoldTimer = null;
+      }
+      if (globalHoldBar) {
+        globalHoldBar.remove();
+        globalHoldBar = null;
+      }
+    }
+
+    document.addEventListener("mousedown", startHold);
+    document.addEventListener("mouseup", cancelHold);
+    document.addEventListener("mouseleave", cancelHold);
+
+    document.addEventListener("touchstart", startHold, { passive: true });
+    document.addEventListener("touchend", cancelHold);
+    document.addEventListener("touchcancel", cancelHold);
+
+    document.addEventListener("click", (e) => {
+      if (globalHoldTriggered) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        globalHoldTriggered = false;
+      }
+    }, true);
+  }
+  initGlobalAcLongPress();
+
+  window.openAcLeftDrawer = openAcLeftDrawer;
+  window.closeAcLeftDrawer = closeAcLeftDrawer;
+  window.getStoredAcLimits = getStoredAcLimits;
+  window.saveStoredAcLimits = saveStoredAcLimits;
+  window.getStoredAcTimers = getStoredAcTimers;
+  window.saveStoredAcTimers = saveStoredAcTimers;
+  window.checkActiveAcTimers = checkActiveAcTimers;
 
   // Khởi tạo ban đầu
   if (typeof renderDashboardRoomFilters === "function") {
