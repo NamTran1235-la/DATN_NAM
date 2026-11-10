@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="css/style.css?v=85">
+  <link rel="stylesheet" href="css/style.css?v=86">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -59,13 +59,10 @@
           <i class="fa-solid fa-shapes nav-icon"></i>
           <span>Quản lý phòng</span>
         </a>
-        <a href="javascript:void(0)" class="nav-item" id="nav-home-mgmt">
-          <i class="fa-solid fa-house-chimney nav-icon"></i>
-          <span>Quản lý nhà</span>
-        </a>
         <a href="javascript:void(0)" class="nav-item" id="nav-notifs">
           <i class="fa-regular fa-bell nav-icon"></i>
           <span>Thông báo</span>
+          <span class="sidebar-notif-pill hidden" id="sidebar-notif-badge">0</span>
         </a>
         <a href="javascript:void(0)" class="nav-item" id="nav-automations">
           <i class="fa-solid fa-bolt-lightning nav-icon"></i>
@@ -132,6 +129,12 @@
             <span class="pulse-dot"></span>
             <span id="mqtt-status-text">Đang kết nối Cloud...</span>
           </div>
+
+          <!-- Notification Bell Button -->
+          <button class="topbar-btn notif-bell-btn" id="btn-topbar-notifs" title="Trung tâm thông báo & cảnh báo">
+            <i class="fa-regular fa-bell"></i>
+            <span class="topbar-notif-badge hidden" id="topbar-notif-badge">0</span>
+          </button>
 
           <!-- Settings Button -->
           <button class="topbar-btn" id="btn-settings" title="Cài đặt hệ thống">
@@ -708,6 +711,64 @@
           <!-- Danh sách Kịch bản Tự Động Hóa -->
           <div class="auto-rules-container" id="auto-rules-list">
             <!-- Dynamic automation cards rendered here -->
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SUB-VIEW: TRUNG TÂM THÔNG BÁO & CẢNH BÁO (NOTIFICATION CENTER)    -->
+        <!-- ================================================================ -->
+        <div id="view-notifications" class="hunonic-subview view-notifications" style="display: none;">
+          <!-- Header -->
+          <div class="subview-header">
+            <div class="subview-header-left">
+              <button type="button" class="btn-subview-back" id="btn-notifs-back" title="Quay lại Trang chủ">
+                <i class="fa-solid fa-arrow-left"></i>
+              </button>
+              <div class="subview-header-icon" style="background: #eff6ff; color: #2563eb;">
+                <i class="fa-regular fa-bell"></i>
+              </div>
+              <div>
+                <h2 class="subview-header-title">Trung tâm Thông báo</h2>
+                <div class="subview-header-subtitle">Nhật ký sự kiện, cảnh báo an toàn & lịch sử điều phối hệ thống</div>
+              </div>
+            </div>
+            <div class="subview-header-right">
+              <button type="button" class="btn-notif-action" id="btn-mark-all-read" title="Đánh dấu tất cả đã đọc">
+                <i class="fa-solid fa-check-double"></i> <span>Đã đọc hết</span>
+              </button>
+              <button type="button" class="btn-notif-action btn-notif-danger" id="btn-clear-all-notifs" title="Xóa toàn bộ lịch sử thông báo">
+                <i class="fa-regular fa-trash-can"></i> <span>Xóa tất cả</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Notification Toolbar & Filter Tabs -->
+          <div class="notif-toolbar">
+            <div class="notif-filter-tabs" id="notif-filter-tabs">
+              <button type="button" class="notif-tab active" data-filter="all">
+                Tất cả <span class="notif-tab-badge" id="count-tab-all">0</span>
+              </button>
+              <button type="button" class="notif-tab" data-filter="alert">
+                <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444; font-size: 0.75rem;"></i> Cảnh báo <span class="notif-tab-badge badge-warning" id="count-tab-alert">0</span>
+              </button>
+              <button type="button" class="notif-tab" data-filter="presence">
+                <i class="fa-solid fa-person-walking" style="color: #059669; font-size: 0.75rem;"></i> Hiện diện <span class="notif-tab-badge" id="count-tab-presence">0</span>
+              </button>
+              <button type="button" class="notif-tab" data-filter="automation">
+                <i class="fa-solid fa-bolt" style="color: #7c3aed; font-size: 0.75rem;"></i> Tự động hóa <span class="notif-tab-badge" id="count-tab-auto">0</span>
+              </button>
+              <button type="button" class="notif-tab" data-filter="device">
+                <i class="fa-solid fa-microchip" style="color: #0284c7; font-size: 0.75rem;"></i> Thiết bị <span class="notif-tab-badge" id="count-tab-device">0</span>
+              </button>
+            </div>
+            <div class="notif-unread-summary" id="notif-unread-summary">
+              <i class="fa-solid fa-circle-info"></i> Có <strong id="notif-unread-num">0</strong> thông báo chưa đọc
+            </div>
+          </div>
+
+          <!-- Notification Cards List Container -->
+          <div class="notif-cards-list" id="notif-cards-list">
+            <!-- Dynamic notifications injected by app.js -->
           </div>
         </div>
       </main>
@@ -1686,6 +1747,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="js/app.js?v=85"></script>
+  <script src="js/app.js?v=86"></script>
 </body>
 </html>
