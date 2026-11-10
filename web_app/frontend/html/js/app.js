@@ -4646,6 +4646,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (shouldTrigger) {
         automationCooldowns[rule.id] = now;
         const acts = rule.actions;
+        const apiRunner = (typeof window !== "undefined" && window.callApi) ? window.callApi : callApi;
 
         if (acts.ac_power !== undefined) {
           acState.power = acts.ac_power;
@@ -4653,7 +4654,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (acts.ac_mode !== undefined) acState.mode = acts.ac_mode;
           if (acts.ac_fan !== undefined) acState.fan = acts.ac_fan;
           updateAcModalUI();
-          callApi("/api/hvac/control", "POST", {
+          apiRunner("/api/hvac/control", "POST", {
             power: acState.power,
             temp: acState.temp,
             mode: acState.mode,
@@ -4663,12 +4664,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (acts.relay1 !== undefined && acts.relay1 >= 0) {
           relayStates[1] = acts.relay1;
-          callApi("/api/gateway/relay", "POST", { channel: 1, state: acts.relay1 }).catch(err => console.error("Auto R1 err:", err));
+          apiRunner("/api/gateway/relay", "POST", { channel: 1, state: acts.relay1 }).catch(err => console.error("Auto R1 err:", err));
         }
 
         if (acts.relay2 !== undefined && acts.relay2 >= 0) {
           relayStates[2] = acts.relay2;
-          callApi("/api/gateway/relay", "POST", { channel: 2, state: acts.relay2 }).catch(err => console.error("Auto R2 err:", err));
+          apiRunner("/api/gateway/relay", "POST", { channel: 2, state: acts.relay2 }).catch(err => console.error("Auto R2 err:", err));
         }
 
         renderDevices();
