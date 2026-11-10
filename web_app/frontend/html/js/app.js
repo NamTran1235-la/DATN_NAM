@@ -1824,11 +1824,12 @@ document.addEventListener("DOMContentLoaded", () => {
       document.head.appendChild(style);
     }
     // Preserve the animation across polling renders when the state is unchanged.
-    const viewKey = `${online}:${known}:${occupied}`;
+    const bat = getSensorBatteryInfo(dev);
+    const viewKey = `${online}:${known}:${occupied}:${bat.voltageStr}`;
     if (panel.dataset.presenceView === viewKey) return;
     panel.dataset.presenceView = viewKey;
     panel.innerHTML = `
-      <section aria-live="polite" style="padding:28px 20px;margin-bottom:22px;border:1px solid #e2e8f0;border-radius:22px;background:linear-gradient(160deg,#f0fdf4,#fff);text-align:center;">
+      <section aria-live="polite" style="padding:24px 20px;margin-bottom:18px;border:1px solid #e2e8f0;border-radius:22px;background:linear-gradient(160deg,#f0fdf4,#fff);text-align:center;">
         <div class="presence-live-scene ${occupied ? 'is-active' : ''}" aria-hidden="true">
           <span class="radar-ring"></span><span class="radar-ring"></span>
           <div class="presence-person-disc">
@@ -1848,6 +1849,23 @@ document.addEventListener("DOMContentLoaded", () => {
         <div style="font-size:11px;letter-spacing:1.4px;color:#94a3b8;font-weight:700;margin-bottom:8px;">TRẠNG THÁI HIỆN DIỆN</div>
         <strong style="font-size:21px;color:${color};">${label}</strong>
         <p style="margin:10px 0 0;color:#94a3b8;font-size:12px;">${online ? 'Cập nhật từ cảm biến trong phòng' : 'Đang chờ cảm biến gửi dữ liệu mới'}</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+            <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:6px;letter-spacing:0.5px;">NGUỒN PIN</div>
+            <div style="font-size:16px;font-weight:700;color:${bat.color};display:flex;align-items:center;justify-content:center;gap:6px;">
+              <i class="fa-solid ${bat.icon}"></i> ${bat.voltageStr}
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px;font-weight:600;">Dung lượng: ${bat.pct}%</div>
+          </div>
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+            <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:6px;letter-spacing:0.5px;">KẾT NỐI SÓNG</div>
+            <div style="font-size:16px;font-weight:700;color:${online ? '#00b06f' : '#94a3b8'};display:flex;align-items:center;justify-content:center;gap:6px;">
+              <i class="fa-solid fa-wifi"></i> ESP-NOW
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px;font-weight:600;">${online ? (sensorData.rssi ? sensorData.rssi + ' dBm' : 'Tín hiệu tốt') : 'Mất kết nối'}</div>
+          </div>
+        </div>
       </section>`;
   }
 
@@ -2466,6 +2484,68 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+  function isSensorDevice(dev) {
+    if (!dev) return false;
+    return dev.type === "sensor" || dev.type === "espnow" || dev.id === "dev_espnow_node_1" || 
+      (typeof dev.id === "string" && (dev.id.includes("sensor") || dev.id.includes("espnow"))) ||
+      (typeof dev.name === "string" && dev.name.toLowerCase().includes("cảm biến"));
+  }
+
+  function getSensorBatteryInfo(dev) {
+    let v = 0;
+    if (sensorData && (Number(sensorData.battery) > 0 || Number(sensorData.batt) > 0)) {
+      v = Number(sensorData.battery || sensorData.batt);
+    } else if (dev && Number(dev.battery) > 0) {
+      v = Number(dev.battery);
+    }
+    if (!v || isNaN(v) || v <= 0) v = 3.30;
+
+    let pct = 100;
+    if (v >= 4.15) {
+      pct = 100;
+    } else if (v >= 3.6) {
+      pct = Math.min(100, Math.max(5, Math.round(((v - 3.4) / (4.2 - 3.4)) * 100)));
+    } else {
+      pct = Math.min(100, Math.max(5, Math.round(((v - 2.6) / (3.3 - 2.6)) * 100)));
+    }
+
+    let icon = "fa-battery-full";
+    let color = "#00b06f";
+    if (pct >= 80) {
+      icon = "fa-battery-full";
+      color = "#00b06f";
+    } else if (pct >= 55) {
+      icon = "fa-battery-three-quarters";
+      color = "#00b06f";
+    } else if (pct >= 30) {
+      icon = "fa-battery-half";
+      color = "#f59e0b";
+    } else if (pct >= 15) {
+      icon = "fa-battery-quarter";
+      color = "#f97316";
+    } else {
+      icon = "fa-battery-empty";
+      color = "#ef4444";
+    }
+
+    return {
+      voltage: v,
+      voltageStr: v.toFixed(2) + "V",
+      pct: pct,
+      icon: icon,
+      color: color
+    };
+  }
+
+  function getBatteryHunonicHtml(dev, isOnline) {
+    if (!isSensorDevice(dev)) return "";
+    if (!isOnline) {
+      return `<span class="sensor-batt-pill offline" title="Pin Node: Ngoại tuyến"><i class="fa-solid fa-battery-empty"></i> <span>--</span></span>`;
+    }
+    const bat = getSensorBatteryInfo(dev);
+    return `<span class="sensor-batt-pill" title="Mức pin Node: ${bat.voltageStr} (${bat.pct}%)" style="color:${bat.color};border-color:${bat.color}35;"><i class="fa-solid ${bat.icon}"></i> <span>${bat.voltageStr}</span></span>`;
+  }
+
   // ── TRẠNG THÁI SUB-VIEW HIỆN TẠI (GIỐNG HUNONIC) ─────────────────────────────
   let currentHubView = null; // null: Home, hoặc { type: 'gateway' | 'ir_hub', dev: hubDev, parent: 'home' | 'gateway' }
 
@@ -2667,7 +2747,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (dev.type === "sensor") {
-          subText += `<span style="display:block;">${isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}</span>`;
+          const bat = getSensorBatteryInfo(dev);
+          const batLabel = isOnline ? ` &bull; <i class="fa-solid ${bat.icon}" style="color:${bat.color};"></i> ${bat.voltageStr}` : '';
+          subText += `<span style="display:block;">${isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}${batLabel}</span>`;
           subText += getNodePresenceHtml(isOnline);
         }
 
@@ -2679,7 +2761,10 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="hunonic-hex-icon">
                 ${iconSvg}
               </div>
-              ${getWifiHunonicSvg(isOnline)}
+              <div class="hunonic-card-top-right">
+                ${getBatteryHunonicHtml(dev, isOnline)}
+                ${getWifiHunonicSvg(isOnline)}
+              </div>
             </div>
             <div class="hunonic-card-bottom" style="pointer-events: none;">
               <h4 class="hunonic-card-title">${escapeHtml(dev.name)}</h4>
@@ -2918,7 +3003,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (dev.type === "sensor") {
-        subText += `<span style="display:block;">${isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}</span>`;
+        const bat = getSensorBatteryInfo(dev);
+        const batLabel = isOnline ? ` &bull; <i class="fa-solid ${bat.icon}" style="color:${bat.color};"></i> ${bat.voltageStr}` : '';
+        subText += `<span style="display:block;">${isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}${batLabel}</span>`;
         subText += getNodePresenceHtml(isOnline);
       }
 
@@ -2930,7 +3017,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="hunonic-hex-icon">
               ${iconSvg}
             </div>
-            ${getWifiHunonicSvg(isOnline)}
+            <div class="hunonic-card-top-right">
+              ${getBatteryHunonicHtml(dev, isOnline)}
+              ${getWifiHunonicSvg(isOnline)}
+            </div>
           </div>
           <div class="hunonic-card-bottom">
             <h4 class="hunonic-card-title">${escapeHtml(dev.name)}</h4>
@@ -4599,6 +4689,7 @@ document.addEventListener("DOMContentLoaded", () => {
         sensorData.temp = s.val1 || 0;
         sensorData.hum = s.val2 || 0;
         sensorData.batt = s.battery || 0;
+        sensorData.battery = s.battery || 0;
         sensorData.presence = s.presence ?? null;
         sensorData.lastSeen = s.last_seen;
 
@@ -4610,6 +4701,7 @@ document.addEventListener("DOMContentLoaded", () => {
         customDevices.forEach(cd => {
           if (cd.type === "sensor" || cd.id === "dev_espnow_node_1" || (cd.id && cd.id.includes("espnow")) || (cd.name && cd.name.toLowerCase().includes("node cảm biến"))) {
             cd.online = isNodeOnline;
+            if (s.battery) cd.battery = s.battery;
           }
         });
 
