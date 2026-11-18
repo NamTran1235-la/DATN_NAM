@@ -17,7 +17,7 @@
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=140">
+  <link rel="stylesheet" href="css/style.css?v=141">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -219,13 +219,19 @@
             </div>
 
             <!-- 2. Power / Energy Card (Emerald Green Gradient) -->
-            <div class="widget-card power-card" id="card-power-widget" style="cursor: pointer;" title="Bấm để xem chi tiết thông số đo điện năng">
+            <div class="widget-card power-card" id="card-power-widget" style="cursor: pointer;" title="Bấm để xem chi tiết thông số đo điện năng & cài đặt giá điện">
               <div class="power-card-header">
                 <span id="power-widget-header">Điện tiêu thụ &bull; Đang đồng bộ...</span>
               </div>
               <div class="power-card-value">
-                <span class="power-num" id="power-widget-num">0.00</span>
-                <span class="power-unit">kWh</span>
+                <div class="power-main-metric">
+                  <span class="power-num" id="power-widget-num">0.00</span>
+                  <span class="power-unit">kWh</span>
+                </div>
+                <div class="power-cost-badge" id="power-widget-cost-badge" title="Tiền điện tạm tính theo đơn giá">
+                  <span class="power-cost-label">Tiền điện tạm tính</span>
+                  <span class="power-cost-val" id="power-widget-cost-val">0 đ</span>
+                </div>
               </div>
               <div class="power-card-footer">
                 <span id="power-widget-sub">Tháng trước: 0.00 kWh</span>
@@ -1221,6 +1227,25 @@
                 <option value="Ban công">Ban công</option>
                 <option value="Sân vườn">Sân vườn</option>
               </select>
+            </div>
+          </div>
+
+          <!-- Cấu hình Đơn giá điện riêng cho thiết bị Đo Điện Năng PZEM -->
+          <div class="drawer-field" id="drawer-field-pzem-rate" style="display: none;">
+            <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span><i class="fa-solid fa-coins" style="color: #eab308;"></i> Đơn giá điện (VNĐ/kWh):</span>
+              <span id="drawer-pzem-cost-preview" style="font-weight: 700; color: #00b06f; font-size: 0.84rem;">Tạm tính: 0 đ</span>
+            </label>
+            <div class="drawer-input-wrap">
+              <i class="fa-solid fa-money-bill-wave" style="color: #00b06f;"></i>
+              <input type="number" id="drawer-edit-pzem-rate" placeholder="Nhập đơn giá (VD: 2500)" min="100" step="100" value="2500">
+              <span style="font-size: 0.8rem; color: #64748b; font-weight: 600; padding-right: 12px; white-space: nowrap;">đ/kWh</span>
+            </div>
+            <div class="pzem-rate-presets">
+              <button type="button" class="btn-rate-preset" data-rate="1893">1.893 đ (Bậc 1)</button>
+              <button type="button" class="btn-rate-preset" data-rate="2167">2.167 đ (Bậc TB)</button>
+              <button type="button" class="btn-rate-preset" data-rate="2500">2.500 đ (Chuẩn)</button>
+              <button type="button" class="btn-rate-preset" data-rate="3500">3.500 đ (Trọ/KD)</button>
             </div>
           </div>
 
@@ -2253,7 +2278,7 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="js/app.js?v=140"></script>
+  <script src="js/app.js?v=141"></script>
 </body>
 
 </html>

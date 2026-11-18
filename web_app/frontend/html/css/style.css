@@ -567,6 +567,14 @@ body {
 .power-card-value {
   margin: 14px 0;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.power-main-metric {
+  display: flex;
   align-items: baseline;
   gap: 8px;
 }
@@ -582,6 +590,72 @@ body {
   font-size: 1.25rem;
   font-weight: 600;
   opacity: 0.9;
+}
+
+.power-cost-badge {
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 14px;
+  padding: 6px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.power-cost-badge:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.power-cost-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  opacity: 0.9;
+  color: #ffffff;
+}
+
+.power-cost-val {
+  font-size: 1.28rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.pzem-rate-presets {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-rate-preset {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-rate-preset:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.btn-rate-preset.active {
+  background: #00b06f;
+  color: #ffffff;
+  border-color: #00b06f;
+  box-shadow: 0 2px 6px rgba(0, 176, 111, 0.28);
 }
 
 .power-card-footer {

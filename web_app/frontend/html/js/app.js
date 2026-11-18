@@ -1045,7 +1045,8 @@ document.addEventListener("DOMContentLoaded", () => {
           gate_custom_name: localStorage.getItem("gate_custom_name") || "Trạm Gateway ESP32-S3",
           gate_added_to_room: localStorage.getItem("gate_added_to_room") || "true",
           gate_ac_limits: localStorage.getItem("gate_ac_limits") || "{}",
-          gate_ac_timers: localStorage.getItem("gate_ac_timers") || "[]"
+          gate_ac_timers: localStorage.getItem("gate_ac_timers") || "[]",
+          gate_electricity_rate: localStorage.getItem("gate_electricity_rate") || "2500"
         };
         await callApi("/api/user/devices", "POST", {
           devices: customDevices,
@@ -1192,6 +1193,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (s.gate_ac_timers && s.gate_ac_timers !== localStorage.getItem("gate_ac_timers")) {
               localStorage.setItem("gate_ac_timers", s.gate_ac_timers);
               if (typeof renderAcActiveTimers === "function") renderAcActiveTimers();
+            }
+            if (s.gate_electricity_rate && s.gate_electricity_rate !== localStorage.getItem("gate_electricity_rate")) {
+              localStorage.setItem("gate_electricity_rate", s.gate_electricity_rate);
+              hasChanges = true;
             }
           }
 
@@ -2018,6 +2023,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (presencePanel) presencePanel.style.display = "none";
     const pzemPanel = document.getElementById("drawer-pzem-panel");
     if (pzemPanel) pzemPanel.style.display = "none";
+    const pzemRateField = document.getElementById("drawer-field-pzem-rate");
+    if (pzemRateField) pzemRateField.style.display = "none";
     currentDrawerTarget = null;
     const gwName = localStorage.getItem("gate_custom_name") || "Trạm Gateway ESP32-S3";
     const gwRoom = localStorage.getItem("gate_room") || "Phòng khách";
@@ -2197,6 +2204,38 @@ document.addEventListener("DOMContentLoaded", () => {
       </section>`;
   }
 
+  // ── CẤU HÌNH ĐƠN GIÁ ĐIỆN & TÍNH TIỀN ĐIỆN PZEM ─────────────────────────────
+  function getElectricityRate() {
+    const pz = getActivePzem();
+    if (pz && pz.electricity_rate) {
+      return Math.max(100, parseInt(pz.electricity_rate, 10) || 2500);
+    }
+    const stored = parseInt(localStorage.getItem("gate_electricity_rate"), 10);
+    return (stored && stored >= 100) ? stored : 2500;
+  }
+  window.getElectricityRate = getElectricityRate;
+
+  function updatePzemCostPreview(rateVal) {
+    const previewEl = document.getElementById("drawer-pzem-cost-preview");
+    if (!previewEl) return;
+    const rate = Math.max(0, parseInt(rateVal, 10) || 0);
+    const energy = (pzemData && pzemData.energy > 0) ? pzemData.energy : 0;
+    const cost = Math.round(energy * rate);
+    previewEl.innerText = `Tạm tính: ${cost.toLocaleString("vi-VN")} đ`;
+  }
+
+  function highlightActiveRatePreset(rateVal) {
+    const val = parseInt(rateVal, 10);
+    document.querySelectorAll(".btn-rate-preset").forEach(btn => {
+      const btnRate = parseInt(btn.getAttribute("data-rate"), 10);
+      if (btnRate === val) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+
   function refreshPzemPanel() {
     let panel = document.getElementById("drawer-pzem-panel");
     const dev = customDevices.find(d => d.id === currentDrawerTarget);
@@ -2220,6 +2259,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const kwhStr = online ? `${pzemData.energy.toFixed(3)} kWh` : "-- kWh";
     const hzStr = online ? `${pzemData.frequency.toFixed(1)} Hz` : "-- Hz";
     const pfStr = online ? `${pzemData.pf.toFixed(2)}` : "--";
+
+    const currentRate = getElectricityRate();
+    const liveCost = Math.round((pzemData.energy || 0) * currentRate);
+    const costStr = online ? `${liveCost.toLocaleString("vi-VN")} đ` : "-- đ";
 
     panel.innerHTML = `
       <section style="padding:20px 16px;margin-bottom:18px;border:1px solid #fed7aa;border-radius:22px;background:linear-gradient(165deg,#fffbeb 0%,#ffffff 100%);text-align:center;box-shadow:0 4px 16px rgba(245,158,11,0.08);">
@@ -2264,7 +2307,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <i class="fa-solid fa-chart-column" style="color:#8b5cf6;"></i> TIÊU THỤ (E)
             </div>
             <div style="font-size:16px;font-weight:800;color:#7e22ce;">${kwhStr}</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Tổng kWh tích lũy</div>
+            <div style="font-size:11px;color:#059669;font-weight:700;margin-top:2px;">💰 Tạm tính: ${costStr}</div>
           </div>
 
           <!-- 5. Tần số lưới -->
@@ -2292,6 +2335,12 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </section>
     `;
+
+    // Cập nhật giá trị preview tiền điện trong phần chỉnh sửa nếu đang mở
+    const rateInput = document.getElementById("drawer-edit-pzem-rate");
+    if (rateInput) {
+      updatePzemCostPreview(rateInput.value || currentRate);
+    }
   }
 
   // ── CẬP NHẬT THẺ WIDGET TỔNG QUAN ĐIỆN NĂNG (POWER CARD BANNER) ───────────────
@@ -2299,6 +2348,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const cardEl = document.getElementById("card-power-widget");
     const headerEl = document.getElementById("power-widget-header");
     const valEl = document.getElementById("power-widget-num");
+    const costValEl = document.getElementById("power-widget-cost-val");
     const subEl = document.getElementById("power-widget-sub");
     const badgeEl = document.getElementById("power-widget-badge");
 
@@ -2311,6 +2361,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const pzemDev = getActivePzem();
     const isPzemDeleted = localStorage.getItem("gate_pzem_deleted") === "true";
+
+    const currentRate = getElectricityRate();
+    const currentEnergy = (pzemData && pzemData.energy > 0) ? pzemData.energy : 0;
+    const totalCost = Math.round(currentEnergy * currentRate);
+    const costFormatted = totalCost.toLocaleString("vi-VN") + " đ";
+    const rateFormatted = currentRate.toLocaleString("vi-VN") + " đ/kWh";
+
+    if (costValEl) {
+      costValEl.innerText = (!pzemDev || isPzemDeleted) ? "0 đ" : costFormatted;
+    }
 
     if (!pzemDev || isPzemDeleted) {
       if (headerEl) headerEl.innerHTML = `${monthStr} &bull; Chưa có thiết bị đo điện`;
@@ -2329,7 +2389,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isOnline) {
       if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName}`;
       if (valEl) valEl.innerText = pzemData.energy > 0 ? pzemData.energy.toFixed(2) : "0.00";
-      if (subEl) subEl.innerHTML = `⚡ ${pzemData.voltage.toFixed(1)}V &bull; ${pzemData.current.toFixed(2)}A`;
+      if (subEl) subEl.innerHTML = `⚡ ${pzemData.voltage.toFixed(1)}V &bull; ${pzemData.current.toFixed(2)}A &bull; ${rateFormatted}`;
       if (badgeEl) {
         badgeEl.innerHTML = `<i class="fa-solid fa-bolt"></i> ${pzemData.power.toFixed(1)} W`;
         badgeEl.style.background = "rgba(255, 255, 255, 0.25)";
@@ -2338,13 +2398,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName} (Ngoại tuyến)`;
       if (valEl) valEl.innerText = pzemData.energy > 0 ? pzemData.energy.toFixed(2) : "0.00";
       const timeStr = (typeof formatTimeAgo === "function" && pzemData.lastSeen) ? formatTimeAgo(pzemData.lastSeen) : null;
-      if (subEl) subEl.innerText = timeStr ? `Lần cuối: ${timeStr}` : "Mất kết nối thiết bị đo";
+      if (subEl) subEl.innerHTML = timeStr ? `Lần cuối: ${timeStr} &bull; ${rateFormatted}` : `Mất kết nối thiết bị đo &bull; ${rateFormatted}`;
       if (badgeEl) {
         badgeEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Ngoại tuyến`;
         badgeEl.style.background = "rgba(239, 68, 68, 0.35)";
       }
     }
   }
+  window.updatePowerSummaryWidget = updatePowerSummaryWidget;
   window.updatePowerSummaryWidget = updatePowerSummaryWidget;
 
   function openChildDeviceDrawer(devId) {
@@ -2502,6 +2563,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (drawerEditName) drawerEditName.value = dev.name;
     if (drawerEditRoom) drawerEditRoom.value = dev.room || "Phòng khách";
 
+    const pzemRateField = document.getElementById("drawer-field-pzem-rate");
+    if (pzemRateField) {
+      if (isPzem) {
+        pzemRateField.style.display = "block";
+        const currentRate = dev.electricity_rate || parseInt(localStorage.getItem("gate_electricity_rate"), 10) || 2500;
+        const rateInput = document.getElementById("drawer-edit-pzem-rate");
+        if (rateInput) rateInput.value = currentRate;
+        updatePzemCostPreview(currentRate);
+        highlightActiveRatePreset(currentRate);
+      } else {
+        pzemRateField.style.display = "none";
+      }
+    }
+
     if (btnDrawerDelete) {
       btnDrawerDelete.innerHTML = isIrHub
         ? `<i class="fa-solid fa-trash-can"></i> Xóa Trạm IR Này Khỏi Gateway`
@@ -2522,6 +2597,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (presencePanel) presencePanel.style.display = "none";
     const pzemPanel = document.getElementById("drawer-pzem-panel");
     if (pzemPanel) pzemPanel.style.display = "none";
+    const pzemRateField = document.getElementById("drawer-field-pzem-rate");
+    if (pzemRateField) pzemRateField.style.display = "none";
     currentDrawerTarget = null;
     currentActiveIrChild = null;
   }
@@ -2873,11 +2950,21 @@ document.addEventListener("DOMContentLoaded", () => {
         if (dev) {
           dev.name = newName;
           dev.room = newRoom;
+          let rateNotice = "";
+          if (isPzemDevice(dev)) {
+            const rateInput = document.getElementById("drawer-edit-pzem-rate");
+            const newRate = rateInput ? Math.max(100, parseInt(rateInput.value, 10) || 2500) : 2500;
+            dev.electricity_rate = newRate;
+            localStorage.setItem("gate_electricity_rate", String(newRate));
+            rateNotice = ` (Đơn giá: ${newRate.toLocaleString('vi-VN')} đ/kWh)`;
+          }
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
           saveUserDevicesToServer(true);
           renderDevices();
+          updatePowerSummaryWidget();
+          refreshPzemPanel();
           openChildDeviceDrawer(currentDrawerTarget);
-          showToast(`Đã lưu thay đổi cho [${newName}]!`, "success");
+          showToast(`Đã lưu thay đổi cho [${newName}]!${rateNotice}`, "success");
         }
       }
     });
@@ -3777,6 +3864,26 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Lắng nghe sự kiện thay đổi đơn giá điện trong Drawer Chỉnh Sửa
+  const pzemRateInput = document.getElementById("drawer-edit-pzem-rate");
+  if (pzemRateInput) {
+    pzemRateInput.addEventListener("input", function() {
+      updatePzemCostPreview(this.value);
+      highlightActiveRatePreset(this.value);
+    });
+  }
+
+  document.querySelectorAll(".btn-rate-preset").forEach(btn => {
+    btn.addEventListener("click", function() {
+      const r = this.getAttribute("data-rate");
+      if (pzemRateInput) {
+        pzemRateInput.value = r;
+        updatePzemCostPreview(r);
+        highlightActiveRatePreset(r);
+      }
+    });
+  });
 
   // Tap opens devices; hold/right-click opens the existing settings drawer.
   if (devicesGrid) {
