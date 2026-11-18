@@ -76,6 +76,10 @@ class UserDeviceConfig(SQLModel, table=True):
     user_id: int = Field(unique=True, index=True)
     devices_json: str = Field(default="[]")
     deleted_flags_json: str = Field(default="{}")
+    rooms_json: Optional[str] = Field(default="[]")
+    scenes_json: Optional[str] = Field(default="[]")
+    automations_json: Optional[str] = Field(default="[]")
+    settings_json: Optional[str] = Field(default="{}")
     updated_at: datetime = Field(default_factory=get_utc_now, index=True)
 
 
@@ -84,8 +88,12 @@ class UserDeviceConfig(SQLModel, table=True):
 # ==============================================================================
 
 class UserDeviceConfigRequest(BaseModel):
-    devices: list = []
-    deleted_flags: Optional[dict] = {}
+    devices: Optional[list] = None
+    deleted_flags: Optional[dict] = None
+    rooms: Optional[list] = None
+    scenes: Optional[list] = None
+    automations: Optional[list] = None
+    settings: Optional[dict] = None
 
 class UserLoginRequest(BaseModel):
     username: str

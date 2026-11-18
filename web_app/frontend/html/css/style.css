@@ -677,31 +677,49 @@ body {
 /* Scenes Chips */
 .scenes-chips-row {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .scene-chip {
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.88);
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-size: 0.88rem;
   font-weight: 600;
   color: #1e293b;
   cursor: pointer;
-  backdrop-filter: blur(10px);
-  transition: all 0.2s ease;
+  backdrop-filter: blur(12px);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 52px;
 }
 
 .scene-chip:hover {
   background: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-  color: var(--hunonic-green);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 176, 111, 0.35);
+}
+
+.scene-chip-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.scene-chip:hover .scene-chip-icon-box {
+  transform: scale(1.08);
 }
 
 .chip-icon {
@@ -4824,8 +4842,10 @@ body {
     flex-wrap: nowrap;
     overflow-x: auto;
     gap: 10px;
-    padding-bottom: 6px;
+    padding: 4px 4px 10px 4px;
+    margin: 0 -2px;
     -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
     scrollbar-width: none;
   }
 
@@ -4834,9 +4854,36 @@ body {
   }
 
   .scene-chip {
-    flex-shrink: 0;
-    padding: 10px 16px;
-    font-size: 0.84rem;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    border-radius: 14px;
+    min-height: 46px;
+    gap: 10px;
+  }
+
+  .scene-chip-icon-box {
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+
+  .scene-chip-name {
+    font-size: 0.82rem;
+  }
+
+  .scene-chip-sub {
+    font-size: 0.68rem;
+  }
+
+  .btn-scene-del {
+    width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+    margin-left: 6px;
+    opacity: 0.8;
   }
 
   .devices-grid {
@@ -4847,6 +4894,76 @@ body {
   .hunonic-device-card {
     padding: 16px 14px;
     min-height: 138px;
+  }
+
+  /* Room Management Responsive for Tablets & Mobile */
+  .room-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .room-stat-card {
+    padding: 10px 12px;
+    gap: 10px;
+    border-radius: 14px;
+  }
+
+  .room-stat-card .stat-icon-wrap {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+
+  .room-stat-card .stat-val {
+    font-size: 1.05rem;
+  }
+
+  .room-stat-card .stat-lbl {
+    font-size: 0.65rem;
+  }
+
+  .rooms-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .room-card {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .room-card-header {
+    gap: 8px;
+  }
+
+  .room-card-name {
+    font-size: 0.95rem;
+  }
+
+  .room-card-count {
+    font-size: 0.72rem;
+  }
+
+  .room-env-strip {
+    padding: 8px 10px;
+    gap: 8px;
+    font-size: 0.75rem;
+  }
+
+  .room-devices-box {
+    margin: 10px 0;
+  }
+
+  .room-card-footer {
+    gap: 8px;
+  }
+
+  .btn-room-off,
+  .btn-room-explore {
+    padding: 8px 12px;
+    font-size: 0.78rem;
   }
 
   .device-detail-drawer {
@@ -5169,6 +5286,96 @@ body {
   .type-card {
     padding: 10px 8px;
     font-size: 0.78rem;
+  }
+
+  /* Small Mobile Scene Chips */
+  .scene-chip {
+    max-width: 250px;
+    padding: 8px 12px;
+  }
+
+  .scene-chip-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+    font-size: 0.8rem;
+  }
+
+  .scene-chip-sub {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+    font-size: 0.66rem;
+  }
+
+  /* Small Mobile Room Management */
+  .subview-header-bar {
+    padding: 8px 10px;
+    margin-bottom: 12px;
+  }
+
+  .subview-header-left {
+    gap: 8px;
+  }
+
+  #rooms-header-icon-box {
+    display: none !important;
+  }
+
+  .subview-title-group div div:last-child {
+    display: none !important;
+  }
+
+  .btn-subview-action#btn-open-create-room {
+    padding: 6px 10px !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap;
+  }
+
+  .btn-subview-action#btn-open-create-room span {
+    font-size: 0.75rem;
+  }
+
+  .room-stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .room-stat-card:last-child {
+    grid-column: span 2;
+  }
+
+  .room-stat-card {
+    padding: 8px 10px;
+  }
+
+  .room-stat-card .stat-val {
+    font-size: 0.95rem;
+  }
+
+  .room-stat-card .stat-lbl {
+    font-size: 0.62rem;
+  }
+
+  .rooms-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .room-card {
+    padding: 14px 12px;
+  }
+
+  .room-env-strip {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 6px 8px;
+  }
+
+  .room-env-item {
+    font-size: 0.72rem;
   }
 }
 

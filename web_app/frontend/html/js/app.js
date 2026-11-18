@@ -175,9 +175,8 @@ document.addEventListener("DOMContentLoaded", () => {
     ac_offline_reason: "Chưa nhận được dữ liệu từ Gateway"
   };
 
-  // Trạng thái hiển thị Gateway & thiết bị ở phòng chính (luôn hiển thị mặc định)
-  let isGateAddedToRoom = true;
-  localStorage.setItem("gate_added_to_room", "true");
+  // Trạng thái hiển thị Gateway & thiết bị ở phòng chính
+  let isGateAddedToRoom = localStorage.getItem("gate_added_to_room") !== "false";
 
   let customDevices = [];
   try {
@@ -941,7 +940,90 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.callApi = callApi;
 
-  // ── ĐỒNG BỘ DANH SÁCH THIẾT BỊ VỚI SERVER DATABASE THEO TÀI KHOẢN ─────────
+  // ── ĐỊNH NGHĨA STORAGE KEYS & DỮ LIỆU CẤU HÌNH MẶC ĐỊNH ─────────────────
+  const ROOMS_STORAGE_KEY = "gate_user_rooms";
+  const DEFAULT_ROOMS = [
+    { id: "room_living", name: "Phòng khách", icon: "fa-couch", color: "#00b06f", isDefault: true },
+    { id: "room_bedroom", name: "Phòng ngủ", icon: "fa-bed", color: "#0284c7" },
+    { id: "room_work", name: "Phòng làm việc", icon: "fa-laptop-code", color: "#8b5cf6" },
+    { id: "room_kitchen", name: "Nhà bếp", icon: "fa-utensils", color: "#f59e0b" }
+  ];
+
+  function getStoredRooms() {
+    try {
+      const stored = localStorage.getItem(ROOMS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_ROOMS;
+  }
+
+  function saveStoredRooms(rooms) {
+    localStorage.setItem(ROOMS_STORAGE_KEY, JSON.stringify(rooms));
+    if (typeof syncRoomDropdowns === "function") syncRoomDropdowns();
+    if (typeof renderDashboardRoomFilters === "function") renderDashboardRoomFilters();
+    if (typeof saveUserDevicesToServer === "function") saveUserDevicesToServer(true);
+  }
+
+  const DEFAULT_SCENES = [
+    {
+      id: "scene_home",
+      name: "Về nhà (25°C Cool)",
+      sub: "AC 25°C &bull; Cool &bull; R1 Bật",
+      icon: "fa-house-user",
+      color: "#00b06f",
+      isDefault: true,
+      actions: { ac_power: 1, ac_temp: 25, ac_mode: 1, ac_fan: 0, relay1: 1 }
+    },
+    {
+      id: "scene_sleep",
+      name: "Đi ngủ (27°C)",
+      sub: "AC 27°C &bull; Quạt êm",
+      icon: "fa-moon",
+      color: "#0284c7",
+      isDefault: true,
+      actions: { ac_power: 1, ac_temp: 27, ac_mode: 1, ac_fan: 1 }
+    },
+    {
+      id: "scene_cool_fast",
+      name: "Làm mát nhanh (20°C)",
+      sub: "AC 20°C &bull; Quạt Max",
+      icon: "fa-snowflake",
+      color: "#06b6d4",
+      isDefault: true,
+      actions: { ac_power: 1, ac_temp: 20, ac_mode: 1, ac_fan: 5 }
+    },
+    {
+      id: "scene_power_save",
+      name: "Tiết kiệm điện",
+      sub: "Tắt toàn bộ thiết bị",
+      icon: "fa-leaf",
+      color: "#10b981",
+      isDefault: true,
+      actions: { ac_power: 0, relay1: 0, relay2: 0 }
+    }
+  ];
+
+  function getStoredScenes() {
+    try {
+      const stored = localStorage.getItem("gate_user_scenes");
+      if (stored !== null) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_SCENES;
+  }
+
+  function saveStoredScenes(scenes) {
+    localStorage.setItem("gate_user_scenes", JSON.stringify(scenes));
+    if (typeof renderFavoriteScenes === "function") renderFavoriteScenes();
+    if (typeof saveUserDevicesToServer === "function") saveUserDevicesToServer(true);
+  }
+
+  // ── ĐỒNG BỘ CẤU HÌNH DASHBOARD TOÀN DIỆN VỚI SERVER THEO TÀI KHOẢN ─────────
   let saveUserDevicesTimer = null;
   function saveUserDevicesToServer(immediate = false) {
     if (!token) return;
@@ -952,12 +1034,26 @@ document.addEventListener("DOMContentLoaded", () => {
           gate_sensor_deleted: localStorage.getItem("gate_sensor_deleted") === "true",
           gate_ir_hub_deleted: localStorage.getItem("gate_ir_hub_deleted") === "true"
         };
+        const curRooms = getStoredRooms();
+        const curScenes = getStoredScenes();
+        const curAutos = typeof getStoredAutomations === "function" ? getStoredAutomations() : [];
+        const curSettings = {
+          gate_room: localStorage.getItem("gate_room") || "Phòng khách",
+          gate_custom_name: localStorage.getItem("gate_custom_name") || "Trạm Gateway ESP32-S3",
+          gate_added_to_room: localStorage.getItem("gate_added_to_room") || "true",
+          gate_ac_limits: localStorage.getItem("gate_ac_limits") || "{}",
+          gate_ac_timers: localStorage.getItem("gate_ac_timers") || "[]"
+        };
         await callApi("/api/user/devices", "POST", {
           devices: customDevices,
-          deleted_flags: deletedFlags
+          deleted_flags: deletedFlags,
+          rooms: curRooms,
+          scenes: curScenes,
+          automations: curAutos,
+          settings: curSettings
         });
       } catch (err) {
-        console.warn("Lỗi lưu thiết bị lên máy chủ:", err);
+        console.warn("Lỗi lưu cấu hình lên máy chủ:", err);
       }
     };
     if (immediate) {
@@ -1040,10 +1136,68 @@ document.addEventListener("DOMContentLoaded", () => {
             hasChanges = true;
           }
 
+          // 3. Đồng bộ Danh sách Phòng (Rooms)
+          if (Array.isArray(serverData.rooms) && serverData.rooms.length > 0) {
+            const curRooms = getStoredRooms();
+            if (JSON.stringify(curRooms) !== JSON.stringify(serverData.rooms)) {
+              localStorage.setItem(ROOMS_STORAGE_KEY, JSON.stringify(serverData.rooms));
+              hasChanges = true;
+              if (typeof syncRoomDropdowns === "function") syncRoomDropdowns();
+              if (typeof renderDashboardRoomFilters === "function") renderDashboardRoomFilters();
+              if (typeof renderRoomsView === "function") renderRoomsView();
+            }
+          }
+
+          // 4. Đồng bộ Ngữ cảnh hay dùng (Scenes)
+          if (Array.isArray(serverData.scenes) && serverData.scenes.length > 0) {
+            const curScenes = getStoredScenes();
+            if (JSON.stringify(curScenes) !== JSON.stringify(serverData.scenes)) {
+              localStorage.setItem("gate_user_scenes", JSON.stringify(serverData.scenes));
+              hasChanges = true;
+              if (typeof renderFavoriteScenes === "function") renderFavoriteScenes();
+            }
+          }
+
+          // 5. Đồng bộ Kịch bản tự động hóa (Automations)
+          if (Array.isArray(serverData.automations) && serverData.automations.length > 0) {
+            const curAutos = typeof getStoredAutomations === "function" ? getStoredAutomations() : [];
+            if (JSON.stringify(curAutos) !== JSON.stringify(serverData.automations)) {
+              localStorage.setItem("gate_user_automations", JSON.stringify(serverData.automations));
+              if (typeof renderAutomations === "function") renderAutomations();
+            }
+          }
+
+          // 6. Đồng bộ Cài đặt chung (Settings)
+          if (serverData.settings && typeof serverData.settings === "object") {
+            const s = serverData.settings;
+            if (s.gate_room && s.gate_room !== localStorage.getItem("gate_room")) {
+              localStorage.setItem("gate_room", s.gate_room);
+              hasChanges = true;
+            }
+            if (s.gate_custom_name && s.gate_custom_name !== localStorage.getItem("gate_custom_name")) {
+              localStorage.setItem("gate_custom_name", s.gate_custom_name);
+              hasChanges = true;
+            }
+            if (s.gate_added_to_room && s.gate_added_to_room !== localStorage.getItem("gate_added_to_room")) {
+              localStorage.setItem("gate_added_to_room", s.gate_added_to_room);
+              isGateAddedToRoom = (s.gate_added_to_room === "true");
+              hasChanges = true;
+            }
+            if (s.gate_ac_limits && s.gate_ac_limits !== localStorage.getItem("gate_ac_limits")) {
+              localStorage.setItem("gate_ac_limits", s.gate_ac_limits);
+            }
+            if (s.gate_ac_timers && s.gate_ac_timers !== localStorage.getItem("gate_ac_timers")) {
+              localStorage.setItem("gate_ac_timers", s.gate_ac_timers);
+              if (typeof renderAcActiveTimers === "function") renderAcActiveTimers();
+            }
+          }
+
           if (hasChanges) {
             foundHub = getActiveIrHub();
             renderDevices();
             renderDrawerChildList();
+            if (typeof renderFavoriteScenes === "function") renderFavoriteScenes();
+            if (typeof renderRoomsView === "function") renderRoomsView();
           }
         } else {
           // Lần đầu tiên: đẩy cấu hình cục bộ hiện tại lên server lưu trữ
@@ -1051,7 +1205,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     } catch (err) {
-      console.warn("Lỗi đồng bộ thiết bị từ máy chủ:", err);
+      console.warn("Lỗi đồng bộ cấu hình từ máy chủ:", err);
     } finally {
       isSyncingUserDevices = false;
     }
@@ -1061,6 +1215,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Gọi đồng bộ ngay khi load trang và khi người dùng chuyển tab quay lại web
   syncUserDevicesFromServer();
   window.addEventListener("focus", () => syncUserDevicesFromServer());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") syncUserDevicesFromServer();
+  });
 
   let deviceSyncPollCounter = 0;
 
@@ -3956,60 +4113,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ── XỬ LÝ NGỮ CẢNH THÔNG MINH ĐỘNG (DYNAMIC SMART SCENES) ─────────────────
-  const DEFAULT_SCENES = [
-    {
-      id: "scene_home",
-      name: "Về nhà (25°C Cool)",
-      sub: "AC 25°C &bull; Cool &bull; R1 Bật",
-      icon: "fa-house-user",
-      color: "#00b06f",
-      isDefault: true,
-      actions: { ac_power: 1, ac_temp: 25, ac_mode: 1, ac_fan: 0, relay1: 1 }
-    },
-    {
-      id: "scene_sleep",
-      name: "Đi ngủ (27°C)",
-      sub: "AC 27°C &bull; Quạt êm",
-      icon: "fa-moon",
-      color: "#0284c7",
-      isDefault: true,
-      actions: { ac_power: 1, ac_temp: 27, ac_mode: 1, ac_fan: 1 }
-    },
-    {
-      id: "scene_cool_fast",
-      name: "Làm mát nhanh (20°C)",
-      sub: "AC 20°C &bull; Quạt Max",
-      icon: "fa-snowflake",
-      color: "#06b6d4",
-      isDefault: true,
-      actions: { ac_power: 1, ac_temp: 20, ac_mode: 1, ac_fan: 5 }
-    },
-    {
-      id: "scene_power_save",
-      name: "Tiết kiệm điện",
-      sub: "Tắt toàn bộ thiết bị",
-      icon: "fa-leaf",
-      color: "#10b981",
-      isDefault: true,
-      actions: { ac_power: 0, relay1: 0, relay2: 0 }
-    }
-  ];
-
-  function getStoredScenes() {
-    try {
-      const stored = localStorage.getItem("gate_user_scenes");
-      if (stored !== null) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {}
-    return DEFAULT_SCENES;
-  }
-
-  function saveStoredScenes(scenes) {
-    localStorage.setItem("gate_user_scenes", JSON.stringify(scenes));
-  }
-
   function renderFavoriteScenes() {
     const container = document.getElementById("scenes-chips-container");
     if (!container) return;
@@ -4030,7 +4133,9 @@ document.addEventListener("DOMContentLoaded", () => {
       scenes.forEach(sc => {
         html += `
           <div class="scene-chip" data-scene-id="${escapeHtml(sc.id)}" title="Bấm để kích hoạt ngữ cảnh [${escapeHtml(sc.name)}]">
-            <i class="fa-solid ${escapeHtml(sc.icon || 'fa-wand-magic-sparkles')} chip-icon" style="color: ${escapeHtml(sc.color || '#00b06f')};"></i>
+            <div class="scene-chip-icon-box" style="background: ${escapeHtml(sc.color || '#00b06f')}18; color: ${escapeHtml(sc.color || '#00b06f')};">
+              <i class="fa-solid ${escapeHtml(sc.icon || 'fa-wand-magic-sparkles')}"></i>
+            </div>
             <div class="scene-chip-text">
               <span class="scene-chip-name">${escapeHtml(sc.name)}</span>
               <span class="scene-chip-sub">${sc.sub || 'Ngữ cảnh tùy chỉnh'}</span>
@@ -5607,6 +5712,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function saveStoredAutomations(autos) {
     localStorage.setItem("gate_user_automations", JSON.stringify(autos));
+    if (typeof saveUserDevicesToServer === "function") {
+      saveUserDevicesToServer(true);
+    }
   }
 
   function openAutomationsView() {
@@ -6293,57 +6401,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnCancelRoomModal = document.getElementById("btn-cancel-room-modal");
   const btnSaveRoom = document.getElementById("btn-save-room");
 
-  const ROOMS_STORAGE_KEY = "gate_user_rooms";
   let editingRoomId = null;
   let selectedRoomIcon = "fa-couch";
   let selectedRoomColor = "#10b981";
-
-  const DEFAULT_ROOMS = [
-    {
-      id: "room_living",
-      name: "Phòng khách",
-      icon: "fa-couch",
-      color: "#00b06f",
-      isDefault: true
-    },
-    {
-      id: "room_bedroom",
-      name: "Phòng ngủ",
-      icon: "fa-bed",
-      color: "#0284c7"
-    },
-    {
-      id: "room_work",
-      name: "Phòng làm việc",
-      icon: "fa-laptop-code",
-      color: "#8b5cf6"
-    },
-    {
-      id: "room_kitchen",
-      name: "Nhà bếp",
-      icon: "fa-utensils",
-      color: "#f59e0b"
-    }
-  ];
-
-  function getStoredRooms() {
-    try {
-      const stored = localStorage.getItem(ROOMS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return DEFAULT_ROOMS;
-  }
-
-  function saveStoredRooms(rooms) {
-    localStorage.setItem(ROOMS_STORAGE_KEY, JSON.stringify(rooms));
-    syncRoomDropdowns();
-    if (typeof renderDashboardRoomFilters === "function") {
-      renderDashboardRoomFilters();
-    }
-  }
 
   function syncRoomDropdowns() {
     const rooms = getStoredRooms();
@@ -7689,6 +7749,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function saveStoredAcLimits(limits) {
     localStorage.setItem("gate_ac_limits", JSON.stringify(limits));
+    if (typeof saveUserDevicesToServer === "function") saveUserDevicesToServer(true);
   }
 
   function getAcLimitsFor(devId) {
@@ -7707,6 +7768,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function saveStoredAcTimers(timers) {
     localStorage.setItem("gate_ac_timers", JSON.stringify(timers));
+    if (typeof saveUserDevicesToServer === "function") saveUserDevicesToServer(true);
   }
 
   const acLeftDrawer = document.getElementById("ac-left-drawer");

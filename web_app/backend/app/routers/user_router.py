@@ -43,7 +43,11 @@ def get_user_devices(
             "data": {
                 "has_config": False,
                 "devices": [],
-                "deleted_flags": {}
+                "deleted_flags": {},
+                "rooms": [],
+                "scenes": [],
+                "automations": [],
+                "settings": {}
             }
         }
     
@@ -57,20 +61,44 @@ def get_user_devices(
     except Exception:
         deleted_flags = {}
 
+    try:
+        rooms = json.loads(cfg.rooms_json or "[]")
+    except Exception:
+        rooms = []
+
+    try:
+        scenes = json.loads(cfg.scenes_json or "[]")
+    except Exception:
+        scenes = []
+
+    try:
+        automations = json.loads(cfg.automations_json or "[]")
+    except Exception:
+        automations = []
+
+    try:
+        settings = json.loads(cfg.settings_json or "{}")
+    except Exception:
+        settings = {}
+
     return {
         "success": True,
         "data": {
             "has_config": True,
             "devices": devices,
             "deleted_flags": deleted_flags,
+            "rooms": rooms,
+            "scenes": scenes,
+            "automations": automations,
+            "settings": settings,
             "updated_at": cfg.updated_at.isoformat() if cfg.updated_at else None
         }
     }
 
 @router.post(
     "/devices",
-    summary="Lưu & đồng bộ cấu hình danh sách thiết bị Dashboard lên máy chủ",
-    description="Lưu danh sách thiết bị tùy chỉnh và cờ xóa theo tài khoản để đồng bộ giữa Điện thoại và Laptop."
+    summary="Lưu & đồng bộ cấu hình Dashboard lên máy chủ",
+    description="Lưu danh sách thiết bị, phòng, ngữ cảnh, kịch bản theo tài khoản để đồng bộ toàn diện giữa Điện thoại và Laptop."
 )
 def save_user_devices(
     req: UserDeviceConfigRequest,
@@ -80,33 +108,46 @@ def save_user_devices(
     uid = resolve_user_id(current_user, session)
     cfg = session.exec(select(UserDeviceConfig).where(UserDeviceConfig.user_id == uid)).first()
     
-    devs_str = json.dumps(req.devices, ensure_ascii=False)
-    flags_str = json.dumps(req.deleted_flags or {}, ensure_ascii=False)
     now_utc = get_utc_now()
 
     if not cfg:
         cfg = UserDeviceConfig(
             user_id=uid,
-            devices_json=devs_str,
-            deleted_flags_json=flags_str,
+            devices_json=json.dumps(req.devices if req.devices is not None else [], ensure_ascii=False),
+            deleted_flags_json=json.dumps(req.deleted_flags if req.deleted_flags is not None else {}, ensure_ascii=False),
+            rooms_json=json.dumps(req.rooms if req.rooms is not None else [], ensure_ascii=False),
+            scenes_json=json.dumps(req.scenes if req.scenes is not None else [], ensure_ascii=False),
+            automations_json=json.dumps(req.automations if req.automations is not None else [], ensure_ascii=False),
+            settings_json=json.dumps(req.settings if req.settings is not None else {}, ensure_ascii=False),
             updated_at=now_utc
         )
         session.add(cfg)
     else:
-        cfg.devices_json = devs_str
-        cfg.deleted_flags_json = flags_str
+        if req.devices is not None:
+            cfg.devices_json = json.dumps(req.devices, ensure_ascii=False)
+        if req.deleted_flags is not None:
+            cfg.deleted_flags_json = json.dumps(req.deleted_flags, ensure_ascii=False)
+        if req.rooms is not None:
+            cfg.rooms_json = json.dumps(req.rooms, ensure_ascii=False)
+        if req.scenes is not None:
+            cfg.scenes_json = json.dumps(req.scenes, ensure_ascii=False)
+        if req.automations is not None:
+            cfg.automations_json = json.dumps(req.automations, ensure_ascii=False)
+        if req.settings is not None:
+            cfg.settings_json = json.dumps(req.settings, ensure_ascii=False)
         cfg.updated_at = now_utc
         session.add(cfg)
 
     session.commit()
     session.refresh(cfg)
     
-    logger.info(f"Đã đồng bộ {len(req.devices)} thiết bị cho tài khoản user_id={uid}")
+    dev_count = len(req.devices) if req.devices is not None else 0
+    logger.info(f"Đã đồng bộ cấu hình cho tài khoản user_id={uid}")
     return {
         "success": True,
-        "message": "Đã lưu cấu hình thiết bị thành công",
+        "message": "Đã lưu cấu hình Dashboard thành công",
         "data": {
-            "device_count": len(req.devices),
+            "device_count": dev_count,
             "updated_at": cfg.updated_at.isoformat()
         }
     }

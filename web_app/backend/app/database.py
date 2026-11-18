@@ -40,6 +40,22 @@ def init_db():
             SQLModel.metadata.create_all(engine)
             logger.info("Khởi tạo cấu trúc Database hoàn tất!")
 
+            # Tự động nâng cấp bảng user_device_configs nếu thiếu cột
+            try:
+                from sqlalchemy import text
+                with engine.connect() as conn:
+                    for col in ["rooms_json", "scenes_json", "automations_json", "settings_json"]:
+                        if is_sqlite:
+                            try:
+                                conn.execute(text(f"ALTER TABLE user_device_configs ADD COLUMN {col} TEXT DEFAULT '[]'"))
+                            except Exception:
+                                pass
+                        else:
+                            conn.execute(text(f"ALTER TABLE user_device_configs ADD COLUMN IF NOT EXISTS {col} TEXT DEFAULT '[]'"))
+                    conn.commit()
+            except Exception as e:
+                logger.debug(f"DB auto-upgrade columns notice: {e}")
+
             # Kiểm tra và tạo tài khoản Admin mặc định
             with Session(engine) as session:
                 admin_user = session.exec(
