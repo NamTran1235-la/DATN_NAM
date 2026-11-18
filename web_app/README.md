@@ -66,12 +66,20 @@ Sau khi khởi chạy, tài liệu API trực quan chuẩn OpenAPI 3.0 sẽ tự
 
 ---
 
-### 2.4. Phân Hệ Cảm Biến Không Dây ESP-NOW (`/api/sensors`)
+### 2.4. Phân Hệ Cảm Biến Không Dây ESP-NOW & Đo Điện Năng PZEM (`/api/sensors`)
 
 | Phương thức | Đường dẫn | Chức năng | Body / Header |
 | :---: | :--- | :--- | :--- |
 | `GET` | `/api/sensors/latest` | Dữ liệu cảm biến mới nhất | Nhiệt độ, Độ ẩm/Hiện diện, Điện áp pin, RSSI |
 | `GET` | `/api/sensors/history` | Lịch sử đo đạc từ Database | Phân trang: `?node_id=1&limit=100` |
+| `GET` | `/api/sensors/pzem/latest` | Dữ liệu đo điện PZEM-004T mới nhất (STM32 UART) | Điện áp (V), Dòng điện (A), Công suất (W), Năng lượng (kWh), Tần số (Hz), Cosφ, Watchdog online |
+
+---
+
+### 2.5. Phân Biệt Hai Thiết Bị Đo Lường & Giám Sát
+
+1. **Node Cảm Biến C3 (con nhận diện):** Module LD2410 Radar + SHT30 kết nối ESP32-C3 truyền qua giao thức không dây **ESP-NOW 2.4GHz** về Gateway ESP32-S3.
+2. **Đo Điện Năng PZEM (con đo điện):** Module PZEM-004T kết nối **STM32F103C8T6** truyền qua giao thức có dây **UART 115200 baud (PA9/TX, PA10/RX)** sang Gateway ESP32-S3, sau đó đẩy lên Cloud MQTT.
 
 ---
 
