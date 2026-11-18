@@ -114,3 +114,46 @@
      4. `Đo Điện Năng PZEM` (Điện áp 221.8V, Công suất 285.3W, Dòng 1.34A, Tiêu thụ 12.54 kWh)
    - Bấm vào thẻ `Đo Điện Năng PZEM`: Mở Drawer bên phải hiển thị đầy đủ bảng 6 chỉ số thời gian thực, có hiệu ứng icon nhấp nháy theo nhịp đo.
    - Bấm vào `Trạm Gateway ESP32-S3`: Mở Subview hiển thị đầy đủ cả 3 thiết bị con trực thuộc.
+
+
+---
+
+### [2026-11-19] - Firmware STM32 FreeRTOS, Sửa Lỗi Ngắt Dây UART & Tính Tiền Điện Realtime
+
+#### 1. Tái Cấu Trúc Firmware STM32F103 (Power Quality) Sang FreeRTOS & FSM
+- **Kiến trúc đa nhiệm FreeRTOS:**
+  - `AppTask` (Priority 3 - Cao nhất): Quản lý máy trạng thái `app.state` (`IDLE`, `CONNECTING`, `CONNECTED`, `APP_ERROR`), gửi JSON mỗi 1000ms qua UART1 (115200 baud), kiểm tra và phân tích phản hồi ACK từ Gateway.
+  - `SensorTask` (Priority 2 - Trung bình): Đọc cảm biến PZEM-004T thật qua USART2 (PA2 TX, PA3 RX) Modbus-RTU 9600 8N1, tính toán CRC16, truy vấn chu kỳ 500ms.
+  - `LedTask` (Priority 1 - Thấp nhất): Điều khiển LED trạng thái PC13 theo trạng thái kết nối UART.
+
+#### 2. Khắc Phục Lỗi LED PC13 & Lỗi Ngắt Kết Nối UART
+1. **Lỗi Active-LOW của LED PC13:**
+   - Bo STM32 Blue Pill có LED PC13 kích mức thấp (Active-LOW: mức 0V là SÁNG, 3.3V là TẮT).
+   - Trong `main.c`, nhánh `CONNECTED` đã được sửa từ `led_off()` sang `led_on()` để LED luôn sáng liên tục khi có kết nối.
+2. **Khắc phục lỗi rút dây UART nhưng LED vẫn không blink:**
+   - **Nguyên nhân:** Chân PA10 (RX) trước đó cấu hình là `IN_FLOATING`. Do nằm sát chân PA9 (TX) trên chip, khi rút dây hở mạch, xung 115200 baud của PA9 tạo hiện tượng **nhiễu xuyên kênh (crosstalk)** làm PA10 thu các xung nhiễu giả lập byte. Bộ kiểm tra `received_any` nhận diện nhầm là Gateway vẫn gửi dữ liệu nên không bao giờ timeout.
+   - **Khắc phục triệt để:**
+     - Đổi cấu hình PA10 thành `GPIO_Mode_IPU` (Input Pull-Up), tự động kéo lên 3.3V (IDLE chuẩn) khi rút dây, triệt tiêu 100% nhiễu.
+     - Lọc bỏ byte lỗi trong ngắt `USART1_IRQHandler` khi cờ `Framing Error (FE)` hoặc `Noise Error (NE)` xuất hiện.
+     - Xác thực nội dung chuỗi: Chỉ reset timeout khi nhận đúng phản hồi chứa từ khóa `"ack"` hoặc `"pzem"` từ Gateway.
+     - Giảm `GATEWAY_TIMEOUT_MS` từ 3500ms xuống **2000ms (2 giây)** để phát hiện ngắt dây tức thời.
+     - Thêm từ khóa `volatile` cho các trường của cấu trúc `a_app` để đồng bộ dữ liệu giữa các task FreeRTOS.
+3. **Gateway ESP32-S3:**
+   - Bổ sung cơ chế phản hồi ACK 2 chiều: Khi nhận được bản tin PZEM hợp lệ từ STM32, Gateway gửi ngay `{"ack":"pzem","status":"ok"}\n` qua GPIO 43 TX.
+
+#### 3. Cấu Hình Đơn Giá Điện & Tính Tiền Điện Realtime Trên Web App
+1. **Drawer Chi Tiết Đo Điện Năng:**
+   - Thêm nhóm **Đơn giá điện (VNĐ/kWh)** trong phần Chỉnh Sửa Thiết Bị.
+   - 4 nút chọn nhanh biểu giá: `1.893 đ` (Bậc 1), `2.167 đ` (Bậc TB), `2.500 đ` (Chuẩn), `3.500 đ` (Trọ/KD) kèm ô nhập giá tùy chỉnh.
+   - Tính năng **Live Preview**: Hiển thị tức thời `Tạm tính: ... đ` khi chọn hoặc gõ giá.
+   - Thêm dòng thành tiền tạm tính vào ô **TIÊU THỤ (E)** (`💰 Tạm tính: ... đ`).
+2. **Thẻ Banner Màu Xanh Ngoài Dashboard:**
+   - Bổ sung thẻ phụ hiển thị thành tiền: `TIỀN ĐIỆN TẠM TÍNH` -> `... đ` (định dạng phân cách hàng nghìn) ngay cạnh số kWh.
+   - Chân thẻ hiển thị: `⚡ 0.0V • 0.00A • Giá: 2.500 đ/kWh` cùng công suất `⚡ 0.0 W`.
+   - Bấm vào thẻ xanh trên Dashboard sẽ mở ngay Drawer PZEM để chỉnh giá điện.
+3. **Đồng Bộ Tập Trung Với Server PostgreSQL:**
+   - Lưu trữ đơn giá điện trong thiết bị và `curSettings.gate_electricity_rate`.
+   - Đồng bộ tự động qua API `POST /api/user/devices` và `GET /api/user/devices` (áp dụng đồng nhất 100% giữa điện thoại & laptop).
+4. **Triển Khai Máy Chủ VPS (`180.93.113.40`):**
+   - Đẩy commit lên GitHub (`origin/main`), kéo về VPS và khởi động lại container `gate_datn_frontend` an toàn.
+   - Nâng phiên bản cache busting lên `?v=141`.
