@@ -3,6 +3,25 @@
 
 ---
 
+### [2026-11-18] - Đồng Bộ Cấu Hình Thiết Bị Tập Trung Theo Tài Khoản (Server-Side Sync)
+
+#### 1. Vấn Đề Thực Tế
+- Trước đây, danh sách thiết bị và cờ xóa (`gate_custom_devices`, `gate_pzem_deleted`,...) chỉ được lưu trữ cục bộ trong `localStorage` của trình duyệt.
+- Hậu quả: Khi người dùng đăng nhập cùng 1 tài khoản trên Điện thoại và thực hiện xóa thiết bị, bộ nhớ trên Laptop không hề biết sự kiện này. Khi reload lại Laptop, thiết bị đã xóa trên điện thoại vẫn còn hiển thị.
+
+#### 2. Giải Pháp Triển Khai
+1. **Mô hình Database & Backend:**
+   - Tạo bảng `user_device_configs` (`UserDeviceConfig`) trong PostgreSQL lưu cấu hình danh sách thiết bị `devices_json` và cờ trạng thái xóa `deleted_flags_json` gắn chặt với `user_id`.
+   - Xây dựng Router `web_app/backend/app/routers/user_router.py`:
+     - `GET /api/user/devices`: Tự động truy xuất danh sách thiết bị và cờ xóa của tài khoản người dùng đang đăng nhập.
+     - `POST /api/user/devices`: Lưu trữ, cập nhật trạng thái thiết bị thời gian thực khi có bất kỳ thao tác Thêm, Sửa hoặc Xóa nào.
+2. **Frontend Đồng Bộ Hai Chiều:**
+   - Khi mở trang web trên bất kỳ máy nào: Tự động gọi `syncUserDevicesFromServer()` để nạp danh sách thiết bị từ server về.
+   - Khi có bất kỳ hành động Thêm/Sửa tên/Xóa thiết bị: Lập tức gọi `saveUserDevicesToServer()` đẩy lên Database PostgreSQL.
+   - Thêm cơ chế lắng nghe sự kiện `window.addEventListener("focus", syncUserDevicesFromServer)` và chu kỳ polling 10s: Khi người dùng thao tác xóa trên điện thoại xong và chuyển sang tab Laptop, Laptop tự động phát hiện thay đổi và đồng bộ xóa thiết bị tức thời.
+
+---
+
 ### [2026-11-18] - Tách Biệt Bộ Đo Điện PZEM-004T (STM32) Thành Thiết Bị Độc Lập
 
 #### 1. Bối Cảnh & Mục Tiêu
