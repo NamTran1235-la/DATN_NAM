@@ -21,6 +21,7 @@
 #include "m_state_machine.h"
 #include "mqtt.h"
 #include "ota.h"
+#include "power_meter_uart.h"
 #include "wifi.h"
 
 static const char *TAG = "GATE_MAIN";
@@ -112,6 +113,7 @@ void app_main(void) {
   xTaskCreate(button_task, "button_task", 4096, NULL, 5, NULL);
   xTaskCreate(led_task, "led_task", 2048, NULL, 2, NULL);
   xTaskCreate(gate_controller_task, "gate_ctrl_task", 10240, NULL, 3, NULL);
+  xTaskCreate(power_meter_uart_task, "pzem_uart_task", 4096, NULL, 4, NULL);
 
   ESP_LOGI(TAG, "Hệ thống Gateway ESP32-S3 đã sẵn sàng!");
 }

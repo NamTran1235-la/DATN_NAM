@@ -6,6 +6,7 @@
 #include "esp_wifi.h"
 
 #include "esp_now_node.h"
+#include "power_meter_uart.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "hunonic_bridge.h"
@@ -59,6 +60,20 @@ static void on_esp_now_telemetry(const uint8_t *mac,
 
 #ifdef TOPIC_GATE_TELEMETRY
   app_mqtt_publish(TOPIC_GATE_TELEMETRY, json_buf, 0, 0);
+#endif
+
+  led_notify_activity();
+}
+
+static void on_stm32_pzem_reading(const power_meter_reading_t *reading,
+                                  const char *raw_json) {
+  if (!reading || !raw_json)
+    return;
+
+  ESP_LOGI(TAG, "Forwarding STM32 PZEM -> MQTT: %s", raw_json);
+
+#ifdef TOPIC_GATE_TELEMETRY
+  app_mqtt_publish(TOPIC_GATE_TELEMETRY, raw_json, 0, 0);
 #endif
 
   led_notify_activity();
@@ -272,6 +287,7 @@ esp_err_t gate_controller_init(void) {
   esp_now_node_register_telemetry_cb(on_esp_now_telemetry);
   app_mqtt_register_data_cb(on_mqtt_command_received, NULL);
   hunonic_bridge_register_state_cb(on_hunonic_ac_state, NULL);
+  power_meter_uart_init(on_stm32_pzem_reading);
   ESP_LOGI(TAG, "Gate Controller da khoi tao thanh cong!");
   return ESP_OK;
 }

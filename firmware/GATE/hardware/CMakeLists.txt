@@ -4,11 +4,13 @@ idf_component_register(
         "esp_now_node/esp_now_node.c"
         "relay/relay.c"
         "button/button.c"
+        "power_meter_uart/power_meter_uart.c"
     INCLUDE_DIRS 
         "led"
         "esp_now_node"
         "relay"
         "button"
+        "power_meter_uart"
         "."
     REQUIRES 
         driver

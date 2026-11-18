@@ -52,6 +52,7 @@ Drivers/CMSIS/Core/core_cm3.c \
 $(wildcard Drivers/STM32F10x_StdPeriph_Driver/src/*.c) \
 Hardware/led/led.c \
 Hardware/delay/delay.c \
+Hardware/pzem/pzem.c \
 middle/uart_debug/uart_debug.c \
 third_party/ringbuff/ringbuff.c \
 third_party/jsmn/jsmn.c
@@ -73,7 +74,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # Linker flags
 LIBS = -lc -lm -lnosys
 LIBDIR =
-LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+LDFLAGS = $(MCU) -specs=nano.specs -u _printf_float -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
 
 # Default rule: build all
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin

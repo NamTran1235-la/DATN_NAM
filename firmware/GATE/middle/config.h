@@ -21,8 +21,7 @@
 #define DEFAULT_WIFI_PASS "66668888"
 
 #ifndef MQTT_BROKER_URI
-#define MQTT_BROKER_URI                                                        \
-  "mqtts://your-cluster.s1.eu.hivemq.cloud:8883"
+#define MQTT_BROKER_URI "mqtts://your-cluster.s1.eu.hivemq.cloud:8883"
 #endif
 
 #ifndef MQTT_USERNAME
@@ -38,10 +37,26 @@
 #define TOPIC_GATE_TELEMETRY "gate/telemetry"
 #define TOPIC_GATE_OTA "gate/ota"
 
-#define BUTTON_PIN 21
+#define BUTTON_PIN 5
 #define LED_WS2812_PIN 48
 #define RELAY_1_PIN 38
 #define RELAY_2_PIN 39
 
+/* Cấu hình UART nhận dữ liệu đo điện từ STM32F103 (PZEM-004T) */
+#ifndef STM32_UART_PORT
+#define STM32_UART_PORT 1 // UART_NUM_1
 #endif
 
+#ifndef STM32_UART_RX_PIN
+#define STM32_UART_RX_PIN 44 // Chân labeled RX trên bo mạch ESP32-S3 (GPIO 44)
+#endif
+
+#ifndef STM32_UART_TX_PIN
+#define STM32_UART_TX_PIN 43 // Chân labeled TX trên bo mạch ESP32-S3 (GPIO 43)
+#endif
+
+#ifndef STM32_UART_BAUDRATE
+#define STM32_UART_BAUDRATE 115200
+#endif
+
+#endif
