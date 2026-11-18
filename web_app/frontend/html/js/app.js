@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   // 1. Kiểm tra xác thực Token
+  const appLoadTime = Date.now();
   const token = localStorage.getItem("gate_token");
   if (!token) {
     window.location.href = "login.html";
@@ -942,10 +943,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── ĐỒNG BỘ DANH SÁCH THIẾT BỊ VỚI SERVER DATABASE THEO TÀI KHOẢN ─────────
   let saveUserDevicesTimer = null;
-  function saveUserDevicesToServer() {
+  function saveUserDevicesToServer(immediate = false) {
     if (!token) return;
-    if (saveUserDevicesTimer) clearTimeout(saveUserDevicesTimer);
-    saveUserDevicesTimer = setTimeout(async () => {
+    const doSave = async () => {
       try {
         const deletedFlags = {
           gate_pzem_deleted: localStorage.getItem("gate_pzem_deleted") === "true",
@@ -959,7 +959,14 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (err) {
         console.warn("Lỗi lưu thiết bị lên máy chủ:", err);
       }
-    }, 300);
+    };
+    if (immediate) {
+      if (saveUserDevicesTimer) clearTimeout(saveUserDevicesTimer);
+      doSave();
+    } else {
+      if (saveUserDevicesTimer) clearTimeout(saveUserDevicesTimer);
+      saveUserDevicesTimer = setTimeout(doSave, 200);
+    }
   }
   window.saveUserDevicesToServer = saveUserDevicesToServer;
 
@@ -977,7 +984,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           let hasChanges = false;
 
-          // 1. Đồng bộ cờ xóa
+          // 1. Đồng bộ cờ xóa từ máy chủ
           const curPzemDel = localStorage.getItem("gate_pzem_deleted") === "true";
           const newPzemDel = Boolean(flags.gate_pzem_deleted);
           if (curPzemDel !== newPzemDel) {
@@ -1002,11 +1009,33 @@ document.addEventListener("DOMContentLoaded", () => {
             hasChanges = true;
           }
 
-          // 2. Đồng bộ danh sách customDevices
+          // 2. Lọc danh sách thiết bị theo cờ xóa
+          let cleanServerDevs = serverDevs.filter(d => {
+            if (newIrDel && (d.type === "ir_hub" || d.id === "dev_ir_hub_hunonic" || (d.id && d.id.includes("ir_hub")))) return false;
+            if (newSensorDel && (d.type === "sensor" || d.id === "dev_espnow_node_1" || (d.id && (d.id.includes("sensor") || d.id.includes("espnow"))))) return false;
+            if (newPzemDel && isPzemDevice(d)) return false;
+            return true;
+          });
+
+          // Đảm bảo IR trung tâm luôn có mặt nếu chưa bị xóa
+          if (!newIrDel && !cleanServerDevs.some(d => d.type === "ir_hub" || d.id === "dev_ir_hub_hunonic" || (d.id && d.id.includes("ir_hub")))) {
+            const defaultIr = getActiveIrHub() || {
+              id: "dev_ir_hub_hunonic",
+              name: "IR trung tâm",
+              type: "ir_hub",
+              room: localStorage.getItem("gate_room") || "Phòng khách",
+              device_id: "3987670",
+              extra: "Trạm phát IR 360° đa hướng",
+              children: [],
+              state: 0
+            };
+            cleanServerDevs.unshift(defaultIr);
+          }
+
           const curDevsStr = JSON.stringify(customDevices);
-          const srvDevsStr = JSON.stringify(serverDevs);
+          const srvDevsStr = JSON.stringify(cleanServerDevs);
           if (curDevsStr !== srvDevsStr) {
-            customDevices = serverDevs;
+            customDevices = cleanServerDevs;
             localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
             hasChanges = true;
           }
@@ -1018,7 +1047,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } else {
           // Lần đầu tiên: đẩy cấu hình cục bộ hiện tại lên server lưu trữ
-          saveUserDevicesToServer();
+          saveUserDevicesToServer(true);
         }
       }
     } catch (err) {
@@ -1031,7 +1060,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Gọi đồng bộ ngay khi load trang và khi người dùng chuyển tab quay lại web
   syncUserDevicesFromServer();
-  window.addEventListener("focus", syncUserDevicesFromServer);
+  window.addEventListener("focus", () => syncUserDevicesFromServer());
 
   let deviceSyncPollCounter = 0;
 
@@ -2522,7 +2551,7 @@ document.addEventListener("DOMContentLoaded", () => {
           foundHub = newDev;
           customDevices.unshift(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
-          saveUserDevicesToServer();
+          saveUserDevicesToServer(true);
           renderDrawerChildList();
           renderDrawerAvailableDevices();
           renderDevices();
@@ -2539,7 +2568,7 @@ document.addEventListener("DOMContentLoaded", () => {
           };
           customDevices.push(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
-          saveUserDevicesToServer();
+          saveUserDevicesToServer(true);
           renderDrawerChildList();
           renderDrawerAvailableDevices();
           renderDevices();
@@ -2556,7 +2585,7 @@ document.addEventListener("DOMContentLoaded", () => {
           };
           customDevices.push(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
-          saveUserDevicesToServer();
+          saveUserDevicesToServer(true);
           renderDrawerChildList();
           renderDrawerAvailableDevices();
           renderDevices();
@@ -2633,7 +2662,7 @@ document.addEventListener("DOMContentLoaded", () => {
           dev.name = newName;
           dev.room = newRoom;
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
-          saveUserDevicesToServer();
+          saveUserDevicesToServer(true);
           renderDevices();
           openChildDeviceDrawer(currentDrawerTarget);
           showToast(`Đã lưu thay đổi cho [${newName}]!`, "success");
@@ -2682,7 +2711,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
     foundHub = getActiveIrHub();
     renderDrawerAvailableDevices();
-    saveUserDevicesToServer();
+    saveUserDevicesToServer(true);
   }
 
   // Nút "Xóa Thiết Bị Này" ("có xóa thiết bị")
@@ -2695,6 +2724,7 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem("gate_added_to_room", "false");
           closeRightDrawer();
           renderDevices();
+          saveUserDevicesToServer(true);
           showToast("Đã xóa Trạm Gateway khỏi phòng khách!", "info");
         }
       } else {
@@ -3404,9 +3434,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (showIrHub) visibleCardsCount++;
 
     // Tạo HTML cho các thiết bị riêng lẻ khác nếu người dùng thêm vào
+    const isSensorDeleted = localStorage.getItem("gate_sensor_deleted") === "true";
+    const isPzemDeleted = localStorage.getItem("gate_pzem_deleted") === "true";
+
     let customCardsHtml = "";
     customDevices.forEach((dev) => {
       if (dev.type === "ir_hub" || dev.id === "dev_ir_hub_hunonic" || (dev.id && dev.id.includes("ir_hub"))) return; // Đã render riêng
+      if (isSensorDeleted && (dev.type === "sensor" || dev.id === "dev_espnow_node_1" || (dev.id && (dev.id.includes("sensor") || dev.id.includes("espnow"))))) return;
+      if (isPzemDeleted && isPzemDevice(dev)) return;
 
       const isOnline = isDeviceOnline(dev);
       if (!isOnline) offlineCount++;
@@ -4540,7 +4575,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       customDevices.push(newDev);
       localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
-      saveUserDevicesToServer();
+      saveUserDevicesToServer(true);
 
       renderDevices();
       renderDrawerChildList();
@@ -4734,7 +4769,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         customDevices.push(newDev);
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
-        saveUserDevicesToServer();
+        saveUserDevicesToServer(true);
 
         renderDevices();
         renderDrawerChildList();
@@ -5339,6 +5374,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function evaluateAutomationRules(sensors, ac, relays) {
     if (!sensors || !isGatewayOnline) return;
+    if (Date.now() - appLoadTime < 30000) return; // Khoảng hoãn 30s sau khi tải trang, tuyệt đối không tự ý gửi lệnh điều khiển
     const autos = getStoredAutomations();
     if (!autos || autos.length === 0) return;
 
@@ -5504,7 +5540,7 @@ document.addEventListener("DOMContentLoaded", () => {
       icon: "fa-person-walking-arrow-right",
       iconColor: "#059669",
       iconBg: "#ecfdf5",
-      enabled: true,
+      enabled: false,
       triggerText: "Radar LD2410B phát hiện phòng TRỐNG liên tục ≥ 5 phút",
       actionText: "Tự tắt toàn bộ Điều hòa & Ngắt Relay 1 (Đèn chính)",
       actions: { ac_power: 0, relay1: 0 }
@@ -5518,7 +5554,7 @@ document.addEventListener("DOMContentLoaded", () => {
       icon: "fa-temperature-arrow-up",
       iconColor: "#0284c7",
       iconBg: "#f0f9ff",
-      enabled: true,
+      enabled: false,
       triggerText: "Có người trong phòng VÀ Nhiệt độ phòng > 28.5°C",
       actionText: "Bật Điều hòa 24°C Cool & Quạt Auto, Bật Relay 1",
       actions: { ac_power: 1, ac_temp: 24, ac_mode: 1, ac_fan: 0, relay1: 1 }
@@ -5532,7 +5568,7 @@ document.addEventListener("DOMContentLoaded", () => {
       icon: "fa-bolt-lightning",
       iconColor: "#d97706",
       iconBg: "#fef3c7",
-      enabled: true,
+      enabled: false,
       triggerText: "Module PZEM đo công suất tổng > 2500W hoặc Điện áp < 180V",
       actionText: "Tăng điều hòa lên 27°C Eco & Ngắt Relay 2 phụ tải",
       actions: { ac_power: 1, ac_temp: 27, ac_mode: 1, ac_fan: 1, relay2: 0 }
@@ -5546,7 +5582,7 @@ document.addEventListener("DOMContentLoaded", () => {
       icon: "fa-moon",
       iconColor: "#7c3aed",
       iconBg: "#f5f3ff",
-      enabled: true,
+      enabled: false,
       triggerText: "01:00 AM đêm VÀ Radar phát hiện người đứng yên (đang ngủ)",
       actionText: "Tăng điều hòa lên 27°C chống cảm lạnh & giảm ồn quạt",
       actions: { ac_power: 1, ac_temp: 27, ac_mode: 1, ac_fan: 1 }
@@ -5555,6 +5591,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getStoredAutomations() {
     try {
+      if (localStorage.getItem("gate_automations_v3") !== "true") {
+        localStorage.removeItem("gate_user_automations");
+        localStorage.setItem("gate_automations_v3", "true");
+        return DEFAULT_AUTOMATIONS;
+      }
       const stored = localStorage.getItem("gate_user_automations");
       if (stored) {
         const parsed = JSON.parse(stored);
