@@ -19,7 +19,7 @@ from app.models import (
     GatewayStatusLog,
     ControlAudit
 )
-from app.mqtt_service import latest_gateway_status, latest_sensor_data, publish_command, publish_ota_command
+from app.mqtt_service import latest_gateway_status, latest_sensor_data, latest_pzem_data, publish_command, publish_ota_command
 from app.hunonic_service import hunonic_service
 
 FIRMWARE_DIR = os.getenv("FIRMWARE_DIR")
