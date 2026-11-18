@@ -2873,10 +2873,10 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-    const kwhVal = pzemData.energy > 0 ? `${pzemData.energy.toFixed(3)} kWh` : "0.000 kWh";
+    const kwhVal = pzemData.energy > 0 ? `${pzemData.energy.toFixed(2)} kWh` : "0.00 kWh";
     return `
       <div class="sensor-status-row">
-        <span class="sensor-status-chip presence" title="Điện năng tiêu thụ tích lũy" style="color: #059669; font-weight: 600;">
+        <span class="sensor-status-chip presence" title="Điện năng tiêu thụ tích lũy: ${pzemData.energy.toFixed(3)} kWh" style="color: #059669; font-weight: 600;">
           <i class="fa-solid fa-plug-circle-bolt" style="color: #059669;"></i>
           <span>${kwhVal} • Hoạt động</span>
         </span>
