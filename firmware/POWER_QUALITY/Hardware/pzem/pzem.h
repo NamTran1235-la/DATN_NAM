@@ -15,20 +15,27 @@ typedef struct {
     float energy;      // Năng lượng tiêu thụ (kWh), vd: 15.820
     float frequency;   // Tần số lưới điện (Hz), vd: 50.0
     float pf;          // Hệ số công suất, vd: 0.95
+    bool  is_valid;    // Dữ liệu hợp lệ từ cảm biến PZEM-004T thật
 } pzem_data_t;
 
 /**
- * @brief Khởi tạo module giả lập cảm biến PZEM-004T
+ * @brief Khởi tạo giao tiếp USART2 (PA2 TX, PA3 RX) kết nối cảm biến PZEM-004T v3.0 thật
  */
-void pzem_fake_init(void);
+void pzem_init(void);
 
 /**
- * @brief Cập nhật dữ liệu đo đạc (dao động thực tế theo tải)
+ * @brief Đọc bản tin Modbus-RTU từ cảm biến PZEM-004T thật
+ * @return true nếu đọc và xác thực CRC thành công, false nếu lỗi/timeout
  */
-void pzem_fake_update(pzem_data_t *data);
+bool pzem_read_sensor(void);
 
 /**
- * @brief Gửi dữ liệu đo qua UART ở định dạng chuẩn JSON cho Gateway ESP32-S3
+ * @brief Lấy bản sao dữ liệu đo đạc mới nhất (Thread-safe)
+ */
+void pzem_get_data(pzem_data_t *out_data);
+
+/**
+ * @brief Gửi dữ liệu đo qua UART1 ở định dạng chuẩn JSON cho Gateway ESP32-S3
  */
 void pzem_send_json(const pzem_data_t *data);
 

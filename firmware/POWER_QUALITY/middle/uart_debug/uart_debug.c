@@ -39,9 +39,9 @@ void uart_debug_init(uint32_t baudrate) {
   /* Bật ngắt nhận dữ liệu RXNE */
   USART_ITConfig(DEBUG_UART, USART_IT_RXNE, ENABLE);
 
-  /* Cấu hình NVIC */
+  /* Cấu hình NVIC (PreemptionPriority = 6 an toàn tuyệt đối với FreeRTOS) */
   NVIC_InitStructure.NVIC_IRQChannel = DEBUG_UART_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);

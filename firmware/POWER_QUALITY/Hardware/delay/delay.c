@@ -1,38 +1,24 @@
-/**
- ******************************************************************************
- * @file    delay.c
- * @brief   Hàm tạo trễ chính xác dùng SysTick Timer (Bare-metal STM32F103)
- ******************************************************************************
- */
-
 #include "delay.h"
-
-static uint8_t  s_fac_us = 0;
-static uint16_t s_fac_ms = 0;
+#include "FreeRTOS.h"
+#include "task.h"
 
 void delay_init(void) {
-    /* Chọn nguồn xung nhịp cho SysTick là HCLK / 8 (72 MHz / 8 = 9 MHz) */
-    SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK_Div8);
-    s_fac_us = SystemCoreClock / 8000000;    /* 9 xung nhịp = 1 us */
-    s_fac_ms = (uint16_t)s_fac_us * 1000;    /* 9000 xung nhịp = 1 ms */
+    /* Khởi tạo delay tương thích FreeRTOS */
 }
 
 void delay_us(uint32_t us) {
-    uint32_t temp;
-    SysTick->LOAD = us * s_fac_us;
-    SysTick->VAL = 0x00;
-    SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
-    do {
-        temp = SysTick->CTRL;
-    } while ((temp & 0x01) && !(temp & (1 << 16)));
-    SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
-    SysTick->VAL = 0x00;
+    volatile uint32_t count = us * 9;
+    while (count--) {
+        __asm__ volatile ("nop");
+    }
 }
 
 void delay_ms(uint32_t ms) {
-    while (ms > 500) {
-        delay_us(500000);
-        ms -= 500;
+    if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
+        vTaskDelay(pdMS_TO_TICKS(ms));
+    } else {
+        while (ms--) {
+            delay_us(1000);
+        }
     }
-    delay_us(ms * 1000);
 }

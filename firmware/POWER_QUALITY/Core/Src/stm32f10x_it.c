@@ -100,14 +100,14 @@ void UsageFault_Handler(void)
   }
 }
 
+#if 0
 /**
-  * @brief  This function handles SVCall exception.
-  * @param  None
-  * @retval None
+  * @brief  This function handles SVCall exception (Handled by FreeRTOS).
   */
 void SVC_Handler(void)
 {
 }
+#endif
 
 /**
   * @brief  This function handles Debug Monitor exception.
@@ -118,23 +118,21 @@ void DebugMon_Handler(void)
 {
 }
 
+#if 0
 /**
-  * @brief  This function handles PendSVC exception.
-  * @param  None
-  * @retval None
+  * @brief  This function handles PendSVC exception (Handled by FreeRTOS).
   */
 void PendSV_Handler(void)
 {
 }
 
 /**
-  * @brief  This function handles SysTick Handler.
-  * @param  None
-  * @retval None
+  * @brief  This function handles SysTick Handler (Handled by FreeRTOS).
   */
 void SysTick_Handler(void)
 {
 }
+#endif
 
 /******************************************************************************/
 /*                 STM32F10x Peripherals Interrupt Handlers                   */

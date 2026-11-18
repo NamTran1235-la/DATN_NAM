@@ -183,6 +183,10 @@ void power_meter_uart_task(void *pvParameters) {
               // Nháy LED trạng thái Gateway
               led_notify_activity();
 
+              // Phản hồi ACK sang STM32 báo nhận thành công gói tin qua UART1
+              const char *ack_msg = "{\"ack\":\"pzem\",\"status\":\"ok\"}\n";
+              uart_write_bytes(STM32_UART_PORT, ack_msg, strlen(ack_msg));
+
               // Gọi callback chuyển tiếp sang gate_controller
               if (s_data_cb) {
                 s_data_cb(&reading, p);

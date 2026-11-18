@@ -1,5 +1,5 @@
 ################################################################################
-# Makefile for STM32F103C8T6 (StdPeriph Library v3.5.0)
+# Makefile for STM32F103C8T6 (StdPeriph Library v3.5.0 + FreeRTOS)
 # Project: POWER_QUALITY (DATN_NAM)
 ################################################################################
 
@@ -28,6 +28,7 @@ C_DEFS =  \
 C_INCLUDES =  \
 -I. \
 -ICore/Inc \
+-Iapp \
 -IDrivers/CMSIS/Core \
 -IDrivers/CMSIS/Device \
 -IDrivers/STM32F10x_StdPeriph_Driver/inc \
@@ -45,11 +46,20 @@ C_INCLUDES =  \
 
 # C Sources
 C_SOURCES =  \
+app/app.c \
 Core/Src/main.c \
 Core/Src/stm32f10x_it.c \
 Core/Src/system_stm32f10x.c \
 Drivers/CMSIS/Core/core_cm3.c \
 $(wildcard Drivers/STM32F10x_StdPeriph_Driver/src/*.c) \
+Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
+Middlewares/Third_Party/FreeRTOS/Source/queue.c \
+Middlewares/Third_Party/FreeRTOS/Source/list.c \
+Middlewares/Third_Party/FreeRTOS/Source/timers.c \
+Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
+Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
+Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
+Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3/port.c \
 Hardware/led/led.c \
 Hardware/delay/delay.c \
 Hardware/pzem/pzem.c \

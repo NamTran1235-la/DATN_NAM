@@ -1,39 +1,87 @@
+
 #include <stdint.h>
 #include <stdio.h>
 
+#include "FreeRTOS.h"
 #include "Hardware/delay/delay.h"
 #include "Hardware/led/led.h"
 #include "Hardware/pzem/pzem.h"
+#include "app/app.h"
 #include "middle/uart_debug/uart_debug.h"
 #include "stm32f10x.h"
-#include "third_party/ringbuff/ringbuff.h"
+#include "task.h"
+
+static void app_task(void *pvParameters) {
+    (void)pvParameters;
+
+    while (1) {
+        app_process();
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+static void sensor_task(void *pvParameters) {
+    (void)pvParameters;
+
+    while (1) {
+        pzem_read_sensor();
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
+static void led_task(void *pvParameters) {
+    (void)pvParameters;
+
+    while (1) {
+        if (app.state == CONNECTED) {
+            led_on();
+            vTaskDelay(pdMS_TO_TICKS(100));
+        } else {
+            led_toggle();
+            vTaskDelay(pdMS_TO_TICKS(300));
+        }
+    }
+}
+
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
+    (void)xTask;
+    (void)pcTaskName;
+    while (1) {
+        led_toggle();
+        for (volatile int i = 0; i < 200000; i++)
+            ;
+    }
+}
+
+void vApplicationMallocFailedHook(void) {
+    while (1) {
+        led_toggle();
+        for (volatile int i = 0; i < 200000; i++)
+            ;
+    }
+}
 
 int main(void) {
     SystemInit();
+
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
+
     delay_init();
     led_init();
 
-    /* Khởi tạo UART1 (PA9 TX, PA10 RX) tốc độ 115200 bps */
     uart_debug_init(115200);
 
-    /* Khởi tạo module giả lập đo điện PZEM-004T */
-    pzem_fake_init();
-    pzem_data_t pzem_metric;
+    pzem_init();
 
-    delay_ms(500);
+    app_init();
+
+    xTaskCreate(app_task, "AppTask", 256, NULL, 3, NULL);
+    xTaskCreate(sensor_task, "SensorTask", 192, NULL, 2, NULL);
+    xTaskCreate(led_task, "LedTask", 128, NULL, 1, NULL);
+
+    vTaskStartScheduler();
 
     while (1) {
-        /* Cập nhật thông số điện đo đạc */
-        pzem_fake_update(&pzem_metric);
-
-        /* Gửi gói tin JSON sang Gateway ESP32-S3 qua UART1 (PA9 TX) */
-        pzem_send_json(&pzem_metric);
-
-        /* Nháy LED PC13 trên bo Blue Pill báo hiệu vừa gửi 1 gói tin */
-        led_toggle();
-
-        /* Chu kỳ gửi định kỳ 1000ms */
-        delay_ms(1000);
     }
 
     return 0;
