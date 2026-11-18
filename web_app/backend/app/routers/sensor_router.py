@@ -20,7 +20,13 @@ def get_latest_sensor_data(current_user: dict = Depends(get_current_user)):
     last_seen_str = latest_sensor_data.get("last_seen")
     seconds_ago = 999999
     is_online = False
-    if last_seen_str:
+    has_real_data = bool(
+        latest_sensor_data.get("val1", 0) > 0 or 
+        latest_sensor_data.get("val2", 0) > 0 or 
+        latest_sensor_data.get("battery", 0) > 0 or 
+        latest_sensor_data.get("presence") is not None
+    )
+    if last_seen_str and has_real_data:
         try:
             s_dt = datetime.fromisoformat(last_seen_str)
             if s_dt.tzinfo is None:

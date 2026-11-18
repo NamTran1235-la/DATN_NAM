@@ -980,12 +980,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return Boolean(dev.online);
     }
-    // Node Cảm biến ESP-NOW: 1 phút không thấy phản hồi mới tính là offline
+    // Node Cảm biến ESP-NOW: Node phải thực sự đang trực tuyến VÀ có dữ liệu hợp lệ
     if (dev.type === "sensor" || dev.id === "dev_espnow_node_1" || (dev.id && dev.id.includes("espnow")) || (dev.name && dev.name.toLowerCase().includes("node cảm biến"))) {
-      if (sensorData.isOnline !== undefined) {
-        return Boolean(sensorData.isOnline);
-      }
-      return Boolean(sensorData.hasData);
+      return Boolean(sensorData.isOnline && sensorData.hasData);
     }
     return dev.online !== false;
   }
@@ -4711,8 +4708,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const senRes = await callApi("/api/sensors/latest");
     if (senRes && senRes.success && senRes.data) {
       const s = senRes.data;
-      if (s.last_seen && (s.val1 > 0 || s.val2 > 0 || s.presence !== undefined || s.battery > 0)) {
+      const isNodeOnline = Boolean(s.is_online);
+      const hasRealMetrics = Boolean(
+        s.val1 > 0 || s.val2 > 0 || s.battery > 0 || (s.presence !== null && s.presence !== undefined)
+      );
+
+      if (s.last_seen && isNodeOnline && hasRealMetrics) {
         sensorData.hasData = true;
+        sensorData.isOnline = true;
         sensorData.temp = s.val1 || 0;
         sensorData.hum = s.val2 || 0;
         sensorData.batt = s.battery || 0;
@@ -4720,20 +4723,17 @@ document.addEventListener("DOMContentLoaded", () => {
         sensorData.presence = s.presence ?? null;
         sensorData.lastSeen = s.last_seen;
 
-        // Quy tắc: 1 phút (60s) không thấy node phản hồi mới tính là offline
-        const isNodeOnline = (s.is_online !== undefined) ? Boolean(s.is_online) : (s.seconds_ago !== undefined ? s.seconds_ago <= 60 : false);
-        sensorData.isOnline = isNodeOnline;
         handlePresenceNotification();
 
         customDevices.forEach(cd => {
           if (cd.type === "sensor" || cd.id === "dev_espnow_node_1" || (cd.id && cd.id.includes("espnow")) || (cd.name && cd.name.toLowerCase().includes("node cảm biến"))) {
-            cd.online = isNodeOnline;
+            cd.online = true;
             if (s.battery) cd.battery = s.battery;
           }
         });
 
         const isSensorAdded = customDevices.some(cd => cd.type === "sensor" || cd.id === "dev_espnow_node_1" || (cd.id && cd.id.includes("espnow")));
-        if (isSensorAdded && isNodeOnline && sensorData.hasData) {
+        if (isSensorAdded) {
           // Cảnh báo nhiệt độ phòng cao bất thường
           if (sensorData.temp >= 35 && (Date.now() - lastTempAlertTime > 15 * 60000)) {
             lastTempAlertTime = Date.now();
@@ -4760,13 +4760,6 @@ document.addEventListener("DOMContentLoaded", () => {
               presenceDisplay.innerHTML = `<span class="sep">&bull;</span> <span style="color:#94a3b8;"><i class="fa-solid fa-house-user"></i> Phòng trống</span>`;
             }
           }
-        } else {
-          if (weatherTempDisplay) weatherTempDisplay.innerHTML = `--<span class="deg-unit">°C</span>`;
-          if (weatherHumDisplay) {
-            weatherHumDisplay.innerText = isSensorAdded ? "Cảm biến ngoại tuyến" : "Chưa liên kết cảm biến";
-          }
-          const presenceDisplay = document.getElementById("weather-presence-display");
-          if (presenceDisplay) presenceDisplay.innerHTML = "";
         }
       } else {
         sensorData.hasData = false;
@@ -4774,12 +4767,18 @@ document.addEventListener("DOMContentLoaded", () => {
         sensorData.temp = 0;
         sensorData.hum = 0;
         sensorData.batt = 0;
-        sensorData.presence = 0;
+        sensorData.presence = null;
         customDevices.forEach(cd => {
           if (cd.type === "sensor" || cd.id === "dev_espnow_node_1" || (cd.id && cd.id.includes("espnow")) || (cd.name && cd.name.toLowerCase().includes("node cảm biến"))) {
             cd.online = false;
           }
         });
+
+        if (weatherTempDisplay) weatherTempDisplay.innerHTML = `--<span class="deg-unit">°C</span>`;
+        if (weatherHumDisplay) {
+          const isSensorAdded = customDevices.some(cd => cd.type === "sensor" || cd.id === "dev_espnow_node_1" || (cd.id && cd.id.includes("espnow")));
+          weatherHumDisplay.innerText = isSensorAdded ? "Cảm biến ngoại tuyến" : "Chưa liên kết cảm biến";
+        }
         const presenceDisplay = document.getElementById("weather-presence-display");
         if (presenceDisplay) presenceDisplay.innerHTML = "";
       }

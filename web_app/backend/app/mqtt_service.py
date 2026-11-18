@@ -48,6 +48,17 @@ latest_gateway_status = {
 
 current_ota_progress = latest_gateway_status["ota"]
 
+latest_pzem_data = {
+    "voltage": 0.0,
+    "current": 0.0,
+    "power": 0.0,
+    "energy": 0.0,
+    "frequency": 50.0,
+    "pf": 1.0,
+    "last_seen": None,
+    "is_online": False
+}
+
 latest_sensor_data = {
     "node_id": 1,
     "val1": 0.0,
@@ -301,8 +312,23 @@ def on_message(client, userdata, msg):
                 })
                 logger.info(f"[OTA PROGRESS] {data.get('target', 'esp32s3_gate')} -> {data.get('percent')}% ({data.get('status')})")
 
-        # 2. Nhận dữ liệu cảm biến Node ESP-NOW
-        elif topic == settings.TOPIC_GATE_TELEMETRY or "node_id" in data:
+        # 2. Nhận dữ liệu đo điện PZEM-004T (từ STM32 trung gian)
+        elif data.get("type") == "pzem" or ("volt" in data and "power" in data and "node_id" not in data):
+            latest_pzem_data.update({
+                "voltage": float(data.get("volt") or data.get("voltage", 0.0)),
+                "current": float(data.get("curr") or data.get("current", 0.0)),
+                "power": float(data.get("power", 0.0)),
+                "energy": float(data.get("energy", 0.0)),
+                "frequency": float(data.get("freq") or data.get("frequency", 50.0)),
+                "pf": float(data.get("pf", 1.0)),
+                "last_seen": now.isoformat(),
+                "is_online": True
+            })
+            latest_gateway_status["pzem"] = latest_pzem_data
+            logger.info(f"[PZEM MQTT] U={latest_pzem_data['voltage']}V | I={latest_pzem_data['current']}A | P={latest_pzem_data['power']}W | E={latest_pzem_data['energy']}kWh")
+
+        # 3. Nhận dữ liệu cảm biến Node ESP-NOW (SHT30 / Radar LD2410)
+        elif "node_id" in data or ("val1" in data and "val2" in data):
             latest_sensor_data.update({
                 "node_id": data.get("node_id", 1),
                 "val1": data.get("val1", 0.0),
