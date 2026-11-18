@@ -71,6 +71,21 @@ def get_gateway_status(current_user: dict = Depends(get_current_user)):
     latest_gateway_status["ac_hub_state"] = hun_info.get("hub_state", "2")
     latest_gateway_status["ac_hub_last_online"] = hun_info.get("hub_last_online")
 
+    # Watchdog kiểm tra trực tuyến của module đo điện PZEM-004T (STM32 UART)
+    if "pzem" in latest_gateway_status and isinstance(latest_gateway_status["pzem"], dict):
+        pz_last = latest_gateway_status["pzem"].get("last_seen")
+        if pz_last and gw_online:
+            try:
+                pz_dt = datetime.fromisoformat(pz_last)
+                if pz_dt.tzinfo is None:
+                    pz_dt = pz_dt.replace(tzinfo=timezone.utc)
+                diff = (datetime.now(timezone.utc) - pz_dt).total_seconds()
+                latest_gateway_status["pzem"]["is_online"] = (diff <= 15)
+            except Exception:
+                latest_gateway_status["pzem"]["is_online"] = False
+        else:
+            latest_gateway_status["pzem"]["is_online"] = False
+
     # Đồng bộ trạng thái online vào từng thiết bị con
     if "ac_devices" in latest_gateway_status and isinstance(latest_gateway_status["ac_devices"], dict):
         for did, dinfo in latest_gateway_status["ac_devices"].items():

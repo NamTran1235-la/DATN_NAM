@@ -3009,6 +3009,12 @@ body {
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
 }
 
+.disc-icon.pzem {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
 .disc-meta {
   flex: 1;
   min-width: 0;
@@ -3903,6 +3909,12 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 1rem;
+}
+
+.drawer-child-icon.pzem-meter-icon {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.3) !important;
 }
 
 .drawer-child-info h5 {

@@ -147,9 +147,22 @@ document.addEventListener("DOMContentLoaded", () => {
     isOnline: false
   };
 
+  let pzemData = {
+    voltage: 0.0,
+    current: 0.0,
+    power: 0.0,
+    energy: 0.0,
+    frequency: 50.0,
+    pf: 1.0,
+    lastSeen: null,
+    isOnline: false,
+    hasData: false
+  };
+
   window.acState = acState;
   window.relayStates = relayStates;
   window.sensorData = sensorData;
+  window.pzemData = pzemData;
 
   let isGatewayOnline = false;
   let gwMetrics = {
@@ -175,6 +188,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const hasSavedDevices = localStorage.getItem("gate_custom_devices") !== null;
   const isIrExplicitlyDeleted = localStorage.getItem("gate_ir_hub_deleted") === "true";
   const isSensorExplicitlyDeleted = localStorage.getItem("gate_sensor_deleted") === "true";
+  const isPzemExplicitlyDeleted = localStorage.getItem("gate_pzem_deleted") === "true";
+
+  function isPzemDevice(dev) {
+    if (!dev) return false;
+    return dev.type === "pzem" || dev.type === "power" || dev.id === "dev_pzem_meter_1" ||
+      (typeof dev.id === "string" && (dev.id.includes("pzem") || dev.id.includes("power"))) ||
+      (typeof dev.name === "string" && (dev.name.toLowerCase().includes("đo điện") || dev.name.toLowerCase().includes("pzem")));
+  }
 
   function getActiveIrHub() {
     if (localStorage.getItem("gate_ir_hub_deleted") === "true") {
@@ -190,10 +211,30 @@ document.addEventListener("DOMContentLoaded", () => {
     return customDevices.find(d => d.type === "sensor" || d.id === "dev_espnow_node_1" || (d.id && (d.id.includes("sensor") || d.id.includes("espnow")))) || null;
   }
 
+  function getActivePzem() {
+    if (localStorage.getItem("gate_pzem_deleted") === "true") {
+      return null;
+    }
+    return customDevices.find(d => isPzemDevice(d)) || null;
+  }
+
   // Remove switch entries saved by earlier dashboard versions.
   customDevices = customDevices.filter(d => d.type !== "relay" && d.type !== "socket");
   if (isSensorExplicitlyDeleted) {
     customDevices = customDevices.filter(d => d.type !== "sensor" && d.id !== "dev_espnow_node_1" && !(d.id && (d.id.includes("sensor") || d.id.includes("espnow"))));
+  }
+  if (isPzemExplicitlyDeleted) {
+    customDevices = customDevices.filter(d => !isPzemDevice(d));
+  } else if (!getActivePzem()) {
+    const defaultPzem = {
+      id: "dev_pzem_meter_1",
+      name: "Đo Điện Năng PZEM",
+      type: "pzem",
+      room: localStorage.getItem("gate_room") || "Phòng khách",
+      extra: "STM32 UART 115200",
+      state: 1
+    };
+    customDevices.push(defaultPzem);
   }
   localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
@@ -980,6 +1021,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return Boolean(dev.online);
     }
+    // Bộ Đo Điện Năng PZEM-004T STM32
+    if (isPzemDevice(dev)) {
+      return Boolean(isGatewayOnline && pzemData.isOnline && pzemData.hasData);
+    }
     // Node Cảm biến ESP-NOW: Node phải thực sự đang trực tuyến VÀ có dữ liệu hợp lệ
     if (dev.type === "sensor" || dev.id === "dev_espnow_node_1" || (dev.id && dev.id.includes("espnow")) || (dev.name && dev.name.toLowerCase().includes("node cảm biến"))) {
       return Boolean(sensorData.isOnline && sensorData.hasData);
@@ -1687,6 +1732,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function openGatewayDrawer(openAdd = false) {
     const presencePanel = document.getElementById("drawer-presence-panel");
     if (presencePanel) presencePanel.style.display = "none";
+    const pzemPanel = document.getElementById("drawer-pzem-panel");
+    if (pzemPanel) pzemPanel.style.display = "none";
     currentDrawerTarget = null;
     const gwName = localStorage.getItem("gate_custom_name") || "Trạm Gateway ESP32-S3";
     const gwRoom = localStorage.getItem("gate_room") || "Phòng khách";
@@ -1866,6 +1913,103 @@ document.addEventListener("DOMContentLoaded", () => {
       </section>`;
   }
 
+  function refreshPzemPanel() {
+    let panel = document.getElementById("drawer-pzem-panel");
+    const dev = customDevices.find(d => d.id === currentDrawerTarget);
+    const visible = dev && isPzemDevice(dev) && !currentActiveIrChild;
+    if (!panel && visible && drawerHeroBox) {
+      panel = document.createElement("div");
+      panel.id = "drawer-pzem-panel";
+      drawerHeroBox.parentNode.insertBefore(panel, drawerHeroBox);
+    }
+    if (!panel) return;
+    panel.style.display = visible ? "block" : "none";
+    if (!visible) return;
+
+    const online = isDeviceOnline(dev) && pzemData.hasData;
+    const color = online ? "#059669" : "#ef4444";
+    const statusLabel = online ? "Đang Đo Lường Realtime" : "Mất Kết Nối STM32";
+
+    const vStr = online ? `${pzemData.voltage.toFixed(1)} V` : "-- V";
+    const aStr = online ? `${pzemData.current.toFixed(2)} A` : "-- A";
+    const wStr = online ? `${pzemData.power.toFixed(1)} W` : "-- W";
+    const kwhStr = online ? `${pzemData.energy.toFixed(3)} kWh` : "-- kWh";
+    const hzStr = online ? `${pzemData.frequency.toFixed(1)} Hz` : "-- Hz";
+    const pfStr = online ? `${pzemData.pf.toFixed(2)}` : "--";
+
+    panel.innerHTML = `
+      <section style="padding:20px 16px;margin-bottom:18px;border:1px solid #fed7aa;border-radius:22px;background:linear-gradient(165deg,#fffbeb 0%,#ffffff 100%);text-align:center;box-shadow:0 4px 16px rgba(245,158,11,0.08);">
+        <div style="width:64px;height:64px;margin:0 auto 12px;border-radius:50%;background:${online ? '#fef3c7' : '#f1f5f9'};display:grid;place-items:center;color:${online ? '#d97706' : '#94a3b8'};font-size:26px;box-shadow:${online ? '0 6px 18px rgba(217,119,6,0.2)' : 'none'};">
+          <i class="fa-solid fa-bolt ${online ? 'fa-beat-fade' : ''}" style="--fa-beat-fade-scale:1.08;--fa-beat-fade-opacity:0.85;"></i>
+        </div>
+        <div style="font-size:11px;letter-spacing:1.4px;color:#94a3b8;font-weight:700;margin-bottom:4px;">BỘ ĐO ĐIỆN NĂNG PZEM-004T</div>
+        <strong style="font-size:19px;color:${color};display:block;margin-bottom:4px;">${statusLabel}</strong>
+        <p style="margin:0 0 16px;color:#64748b;font-size:12px;">${online ? 'Dữ liệu truyền từ STM32F103 qua cổng UART mỗi giây' : 'Chưa nhận được bản tin UART từ vi điều khiển STM32'}</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <!-- 1. Điện áp -->
+          <div style="background:#ffffff;border:1px solid #fed7aa;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size:10.5px;color:#9a3412;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
+              <i class="fa-solid fa-bolt" style="color:#f59e0b;"></i> ĐIỆN ÁP (U)
+            </div>
+            <div style="font-size:16px;font-weight:800;color:#1e293b;">${vStr}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Dải đo: 80 - 260 V</div>
+          </div>
+
+          <!-- 2. Dòng điện -->
+          <div style="background:#ffffff;border:1px solid #bae6fd;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size:10.5px;color:#0369a1;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
+              <i class="fa-solid fa-gauge-high" style="color:#0284c7;"></i> DÒNG ĐIỆN (I)
+            </div>
+            <div style="font-size:16px;font-weight:800;color:#1e293b;">${aStr}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Dải đo: 0 - 100 A</div>
+          </div>
+
+          <!-- 3. Công suất tác dụng -->
+          <div style="background:#ffffff;border:1px solid #bbf7d0;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size:10.5px;color:#15803d;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
+              <i class="fa-solid fa-lightbulb" style="color:#10b981;"></i> CÔNG SUẤT (P)
+            </div>
+            <div style="font-size:16px;font-weight:800;color:#15803d;">${wStr}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Công suất tiêu thụ</div>
+          </div>
+
+          <!-- 4. Năng lượng tiêu thụ -->
+          <div style="background:#ffffff;border:1px solid #e9d5ff;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size:10.5px;color:#7e22ce;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
+              <i class="fa-solid fa-chart-column" style="color:#8b5cf6;"></i> TIÊU THỤ (E)
+            </div>
+            <div style="font-size:16px;font-weight:800;color:#7e22ce;">${kwhStr}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Tổng kWh tích lũy</div>
+          </div>
+
+          <!-- 5. Tần số lưới -->
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size:10.5px;color:#475569;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
+              <i class="fa-solid fa-wave-square" style="color:#06b6d4;"></i> TẦN SỐ (F)
+            </div>
+            <div style="font-size:15px;font-weight:700;color:#334155;">${hzStr}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Lưới AC chuẩn</div>
+          </div>
+
+          <!-- 6. Hệ số công suất -->
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size:10.5px;color:#475569;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
+              <i class="fa-solid fa-sliders" style="color:#ec4899;"></i> HỆ SỐ (PF)
+            </div>
+            <div style="font-size:15px;font-weight:700;color:#334155;">${pfStr}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Cosφ công suất</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:11px;color:#64748b;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <i class="fa-solid fa-microchip" style="color:#0284c7;"></i>
+          <span>STM32F103 (USART1) ➔ ESP32-S3 (UART1) &bull; 115200 baud</span>
+        </div>
+      </section>
+    `;
+  }
+
   function openChildDeviceDrawer(devId) {
     let dev = customDevices.find(d => d.id === devId);
     if (!dev && (devId === "dev_espnow_node_1" || (typeof devId === "string" && (devId.includes("espnow") || devId.includes("sensor"))))) {
@@ -1901,15 +2045,29 @@ document.addEventListener("DOMContentLoaded", () => {
       customDevices.push(dev);
       localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
     }
+    // Đảm bảo bộ đo điện PZEM luôn mở được dù chưa có trong danh sách
+    if (!dev && (devId === "dev_pzem_meter_1" || (typeof devId === "string" && devId.includes("pzem")))) {
+      dev = {
+        id: devId || "dev_pzem_meter_1",
+        name: "Đo Điện Năng PZEM",
+        type: "pzem",
+        room: localStorage.getItem("gate_room") || "Phòng khách",
+        extra: "STM32 UART 115200",
+        state: 1
+      };
+      customDevices.push(dev);
+      localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+    }
     if (!dev) return;
     currentDrawerTarget = dev.id;
     currentActiveIrChild = null;
 
     const isAc = dev.type === "ac";
     const isIrHub = dev.type === "ir_hub";
+    const isPzem = isPzemDevice(dev);
     const isSwitch = dev.type === "relay" || dev.type === "socket";
-    const faIcon = isIrHub ? "fa-tower-broadcast" : (isAc ? "fa-wind" : (dev.type === "relay" ? "fa-lightbulb" : (dev.type === "socket" ? "fa-plug" : "fa-satellite-dish")));
-    const typeLabel = isIrHub ? "Trạm IR Smart Pro" : (isAc ? "Hồng ngoại IR Smart Pro" : (dev.type === "relay" ? "Công tắc Relay" : (dev.type === "socket" ? "Ổ cắm thông minh" : "Node Cảm Biến ESP-NOW")));
+    const faIcon = isIrHub ? "fa-tower-broadcast" : (isAc ? "fa-wind" : (isPzem ? "fa-bolt" : (dev.type === "relay" ? "fa-lightbulb" : (dev.type === "socket" ? "fa-plug" : "fa-satellite-dish"))));
+    const typeLabel = isIrHub ? "Trạm IR Smart Pro" : (isAc ? "Hồng ngoại IR Smart Pro" : (isPzem ? "Bộ Đo Điện Năng PZEM-004T" : (dev.type === "relay" ? "Công tắc Relay" : (dev.type === "socket" ? "Ổ cắm thông minh" : "Node Cảm Biến ESP-NOW"))));
 
     const isOnline = isDeviceOnline(dev);
 
@@ -1928,6 +2086,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (isIrHub) {
         const childCount = (dev.children && dev.children.length) || 0;
         drawerHeroSub.innerText = `${dev.room || 'Phòng khách'} • ID: ${dev.device_id || '3987670'} • ${childCount} thiết bị IR kết nối`;
+      } else if (isPzem) {
+        drawerHeroSub.innerText = `${dev.room || 'Phòng khách'} • ID: dev_pzem_meter_1 • Bộ Đo Điện Năng PZEM-004T`;
       } else {
         drawerHeroSub.innerText = `${dev.room || 'Phòng khách'} • ${dev.extra || typeLabel}`;
       }
@@ -1946,6 +2106,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (delSecChild) delSecChild.style.display = "block";
 
     refreshPresencePanel();
+    refreshPzemPanel();
 
     // Xử lý hiển thị theo từng phân loại thiết bị
     if (isIrHub) {
@@ -1990,9 +2151,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (drawerAcBackBar) drawerAcBackBar.style.display = "none";
       if (drawerAcPanel) drawerAcPanel.style.display = "none";
       if (drawerHeroBadge) {
-        const isDevOn = dev.state === 1;
-        drawerHeroBadge.className = isDevOn ? "drawer-hero-badge online" : "drawer-hero-badge";
-        drawerHeroBadge.innerHTML = `<i class="fa-solid fa-circle"></i> ${isSwitch ? (isDevOn ? 'Đang BẬT' : 'Đang TẮT') : 'Hoạt động'}`;
+        if (isPzem) {
+          drawerHeroBadge.className = isOnline ? "drawer-hero-badge online" : "drawer-hero-badge offline";
+          drawerHeroBadge.innerHTML = `<i class="fa-solid fa-circle"></i> ${isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}`;
+        } else {
+          const isDevOn = dev.state === 1;
+          drawerHeroBadge.className = isDevOn ? "drawer-hero-badge online" : "drawer-hero-badge";
+          drawerHeroBadge.innerHTML = `<i class="fa-solid fa-circle"></i> ${isSwitch ? (isDevOn ? 'Đang BẬT' : 'Đang TẮT') : 'Hoạt động'}`;
+        }
       }
     }
 
@@ -2002,7 +2168,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnDrawerDelete) {
       btnDrawerDelete.innerHTML = isIrHub
         ? `<i class="fa-solid fa-trash-can"></i> Xóa Trạm IR Này Khỏi Gateway`
-        : `<i class="fa-solid fa-trash-can"></i> Xóa Thiết Bị Này Khỏi Gateway`;
+        : (isPzem
+          ? `<i class="fa-solid fa-trash-can"></i> Xóa Bộ Đo Điện Này Khỏi Gateway`
+          : `<i class="fa-solid fa-trash-can"></i> Xóa Thiết Bị Này Khỏi Gateway`);
     }
 
     if (deviceDetailDrawer) deviceDetailDrawer.classList.add("open");
@@ -2013,6 +2181,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function closeRightDrawer() {
     if (deviceDetailDrawer) deviceDetailDrawer.classList.remove("open");
     if (drawerBackdrop) drawerBackdrop.classList.remove("active");
+    const presencePanel = document.getElementById("drawer-presence-panel");
+    if (presencePanel) presencePanel.style.display = "none";
+    const pzemPanel = document.getElementById("drawer-pzem-panel");
+    if (pzemPanel) pzemPanel.style.display = "none";
     currentDrawerTarget = null;
     currentActiveIrChild = null;
   }
@@ -2069,15 +2241,16 @@ document.addEventListener("DOMContentLoaded", () => {
     customDevices.forEach(dev => {
       const isSwitch = dev.type === "relay" || dev.type === "socket";
       const isIrHub = dev.type === "ir_hub";
-      const faIcon = isIrHub ? "fa-tower-broadcast" : (dev.type === "ac" ? "fa-wind" : (dev.type === "relay" ? "fa-lightbulb" : (dev.type === "socket" ? "fa-plug" : "fa-satellite-dish")));
+      const isPzem = isPzemDevice(dev);
+      const faIcon = isIrHub ? "fa-tower-broadcast" : (dev.type === "ac" ? "fa-wind" : (isPzem ? "fa-bolt" : (dev.type === "relay" ? "fa-lightbulb" : (dev.type === "socket" ? "fa-plug" : "fa-satellite-dish"))));
       const isDevOn = dev.state === 1;
       const childCount = (dev.children && dev.children.length) || 0;
-      const subInfo = isIrHub ? `${childCount} thiết bị IR kết nối` : (dev.extra || '');
+      const subInfo = isIrHub ? `${childCount} thiết bị IR kết nối` : (isPzem ? `STM32 UART • ${pzemData.voltage.toFixed(1)}V` : (dev.extra || ''));
 
       html += `
         <div class="drawer-child-item">
           <div class="drawer-child-left">
-            <div class="drawer-child-icon ${isIrHub ? 'ir-hub-icon' : ''}">
+            <div class="drawer-child-icon ${isIrHub ? 'ir-hub-icon' : (isPzem ? 'pzem-meter-icon' : '')}">
               <i class="fa-solid ${faIcon}"></i>
             </div>
             <div class="drawer-child-info">
@@ -2109,6 +2282,7 @@ document.addEventListener("DOMContentLoaded", () => {
     foundHub = getActiveIrHub();
     const hasIrHub = Boolean(foundHub || customDevices.some(d => d.type === "ir_hub" || d.id === "dev_ir_hub_hunonic" || (d.id && d.id.includes("ir_hub"))));
     const hasSensor = customDevices.some(d => d.type === "sensor" || d.id === "dev_espnow_node_1");
+    const hasPzem = customDevices.some(d => isPzemDevice(d));
 
     // QUY TẮC CỐT LÕI: CHỈ CHO PHÉP HIỂN THỊ KHI SCAN THẤY THỰC TẾ ĐANG TRỰC TUYẾN
     // 1. Trạm IR: Phải kết nối được Gateway VÀ trạm IR thực tế đang cắm điện, trực tuyến trên Hunonic Cloud
@@ -2120,6 +2294,13 @@ document.addEventListener("DOMContentLoaded", () => {
       sensorData.hasData &&
       sensorData.isOnline === true &&
       (sensorData.temp > 0 || sensorData.hum > 0 || sensorData.batt > 0)
+    );
+
+    // 3. Bộ đo điện PZEM: Phải kết nối được Gateway VÀ module đang gửi dữ liệu qua UART
+    const isPzemScanned = Boolean(
+      isGatewayOnline &&
+      pzemData.hasData &&
+      pzemData.isOnline === true
     );
 
     let itemsHtml = "";
@@ -2169,6 +2350,28 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
+    // 3. Bộ Đo Điện Năng PZEM-004T: CHỈ HIỆN KHI SCAN THẤY THỰC TẾ
+    if (!hasPzem && isPzemScanned) {
+      itemsHtml += `
+        <div class="drawer-avail-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #ffffff; border: 1.5px solid #f59e0b; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: #fffbeb; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.05rem;">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div>
+              <h5 style="font-size: 0.85rem; font-weight: 700; color: #1e293b; margin: 0 0 2px;">Đo Điện Năng PZEM</h5>
+              <p style="font-size: 0.72rem; color: #d97706; margin: 0; font-weight: 500;">
+                <i class="fa-solid fa-circle" style="font-size: 0.5rem;"></i> STM32 UART 115200 &bull; 220V AC
+              </p>
+            </div>
+          </div>
+          <button type="button" class="btn-drawer-quick-add" data-type="pzem" data-id="dev_pzem_meter_1" data-name="Đo Điện Năng PZEM" style="padding: 6px 14px; background: #f59e0b; color: #ffffff; border: none; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(245,158,11,0.25);">
+            <i class="fa-solid fa-plus"></i> Thêm
+          </button>
+        </div>
+      `;
+    }
+
     if (!itemsHtml) {
       itemsHtml = `
         <div style="text-align: center; padding: 16px 12px; color: #64748b; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; font-size: 0.78rem;">
@@ -2177,7 +2380,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <strong style="display: block; color: #334155; margin-bottom: 2px;">Chưa quét thấy thiết bị nào</strong>
           <span style="font-size: 0.73rem; line-height: 1.4; display: block; color: #64748b;">
-            Chỉ thiết bị con thực tế đang trực tuyến (Cắm nguồn trạm IR hoặc bật nguồn Node C3) mới xuất hiện tại đây.
+            Chỉ thiết bị con thực tế đang trực tuyến (Cắm nguồn trạm IR, Node C3 hoặc STM32 PZEM) mới xuất hiện tại đây.
           </span>
           <button type="button" id="btn-drawer-rescan" style="display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 5px 12px; background: #ffffff; color: #059669; border: 1px solid #10b981; border-radius: 6px; font-size: 0.74rem; font-weight: 600; cursor: pointer;">
             <i class="fa-solid fa-rotate"></i> Quét lại
@@ -2237,6 +2440,22 @@ document.addEventListener("DOMContentLoaded", () => {
             room: localStorage.getItem("gate_room") || "Phòng khách",
             extra: "ESP-NOW 2.4GHz",
             state: 0
+          };
+          customDevices.push(newDev);
+          localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+          renderDrawerChildList();
+          renderDrawerAvailableDevices();
+          renderDevices();
+          showToast(`Đã thêm thành công [${name}] vào Gateway!`, "success");
+        } else if (type === "pzem") {
+          localStorage.removeItem("gate_pzem_deleted");
+          const newDev = {
+            id: id || "dev_pzem_meter_1",
+            name: name || "Đo Điện Năng PZEM",
+            type: "pzem",
+            room: localStorage.getItem("gate_room") || "Phòng khách",
+            extra: "STM32 UART 115200",
+            state: 1
           };
           customDevices.push(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
@@ -2334,6 +2553,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const isSensor = (dev && (dev.type === "sensor" || dev.id === "dev_espnow_node_1" || (dev.id && (dev.id.includes("sensor") || dev.id.includes("espnow"))))) ||
                      devId === "dev_espnow_node_1" ||
                      (typeof devId === "string" && (devId.includes("sensor") || devId.includes("espnow")));
+    const isPzem = (dev && isPzemDevice(dev)) || devId === "dev_pzem_meter_1" || (typeof devId === "string" && devId.includes("pzem"));
 
     if (isIr) {
       localStorage.setItem("gate_ir_hub_deleted", "true");
@@ -2347,11 +2567,16 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("gate_sensor_deleted", "true");
     }
 
+    if (isPzem) {
+      localStorage.setItem("gate_pzem_deleted", "true");
+    }
+
     customDevices = customDevices.filter(d => {
       if (d.id === devId) return false;
       if (dev && d.id === dev.id) return false;
       if (isIr && (d.type === "ir_hub" || d.id === "dev_ir_hub_hunonic" || (d.id && d.id.includes("ir_hub")))) return false;
       if (isSensor && (d.type === "sensor" || d.id === "dev_espnow_node_1" || (d.id && (d.id.includes("sensor") || d.id.includes("espnow"))))) return false;
+      if (isPzem && isPzemDevice(d)) return false;
       return true;
     });
 
@@ -2595,6 +2820,70 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+  function getPzemHexSvg() {
+    return `
+      <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 2.5L35.5 11.45V29.35L20 38.3L4.5 29.35V11.45L20 2.5Z" fill="#f59e0b"/>
+        <path d="M21.5 10L13.5 22H19.5L18.5 30L26.5 18H20.5L21.5 10Z" fill="#ffffff" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
+      </svg>
+    `;
+  }
+
+  function getPzemTopRightHtml(dev, isOnline) {
+    if (!isPzemDevice(dev)) return "";
+    if (!isOnline) {
+      return `<span class="sensor-batt-pill offline" title="Bộ đo điện: Ngoại tuyến"><i class="fa-solid fa-bolt"></i> <span>--</span></span>`;
+    }
+    const voltStr = pzemData.voltage > 0 ? `${pzemData.voltage.toFixed(1)}V` : "--V";
+    return `<span class="sensor-batt-pill" title="Điện áp lưới: ${voltStr}" style="color:#d97706;border-color:#f59e0b40;background:#fffbeb;"><i class="fa-solid fa-bolt"></i> <span>${voltStr}</span></span>`;
+  }
+
+  function getPzemCardTopMetricsHtml(dev, isOnline) {
+    if (!isOnline) {
+      return `
+        <div class="sensor-metric-row above-title">
+          <span class="sensor-metric-chip offline"><i class="fa-solid fa-bolt"></i> STM32 PZEM</span>
+        </div>
+      `;
+    }
+
+    const pStr = pzemData.power > 0 ? `${pzemData.power.toFixed(1)} W` : "0.0 W";
+    const aStr = pzemData.current > 0 ? `${pzemData.current.toFixed(2)} A` : "0.00 A";
+
+    return `
+      <div class="sensor-metric-row above-title">
+        <span class="sensor-metric-chip" title="Công suất tác dụng">
+          <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i>
+          <span>${pStr}</span>
+        </span>
+        <span class="sensor-metric-chip" title="Dòng điện">
+          <i class="fa-solid fa-gauge-high" style="color: #0284c7;"></i>
+          <span>${aStr}</span>
+        </span>
+      </div>
+    `;
+  }
+
+  function getPzemCardDetailHtml(dev, isOnline) {
+    if (!isOnline) {
+      return `
+        <div class="sensor-status-row">
+          <span class="sensor-status-chip offline"><i class="fa-solid fa-circle-xmark"></i> Mất kết nối</span>
+        </div>
+      `;
+    }
+
+    const kwhVal = pzemData.energy > 0 ? `${pzemData.energy.toFixed(3)} kWh` : "0.000 kWh";
+    return `
+      <div class="sensor-status-row">
+        <span class="sensor-status-chip presence" title="Điện năng tiêu thụ tích lũy" style="color: #059669; font-weight: 600;">
+          <i class="fa-solid fa-plug-circle-bolt" style="color: #059669;"></i>
+          <span>${kwhVal} • Hoạt động</span>
+        </span>
+      </div>
+    `;
+  }
+
   // ── TRẠNG THÁI SUB-VIEW HIỆN TẠI (GIỐNG HUNONIC) ─────────────────────────────
   let currentHubView = null; // null: Home, hoặc { type: 'gateway' | 'ir_hub', dev: hubDev, parent: 'home' | 'gateway' }
 
@@ -2769,9 +3058,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Danh sách các thiết bị con thực tế đã được người dùng quét và thêm vào phòng
       const isSensorDeleted = localStorage.getItem("gate_sensor_deleted") === "true";
+      const isPzemDeleted = localStorage.getItem("gate_pzem_deleted") === "true";
       const userAddedDevices = customDevices.filter(d => {
         if (d.type === "ir_hub" || d.id === "dev_ir_hub_hunonic" || (d.id && d.id.includes("ir_hub"))) return false;
         if (isSensorDeleted && (d.type === "sensor" || d.id === "dev_espnow_node_1" || (d.id && (d.id.includes("sensor") || d.id.includes("espnow"))))) return false;
+        if (isPzemDeleted && isPzemDevice(d)) return false;
         return true;
       });
 
@@ -2784,6 +3075,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (dev.type === "sensor") {
           iconSvg = getSensorHexSvg();
           subText = getSensorCardDetailHtml(dev, isOnline);
+        } else if (isPzemDevice(dev)) {
+          iconSvg = getPzemHexSvg();
+          subText = getPzemCardDetailHtml(dev, isOnline);
         } else if (dev.type === "socket") {
           const isDevOn = isOnline && dev.state === 1;
           iconSvg = getRelayHexSvg(isDevOn);
@@ -2797,12 +3091,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${iconSvg}
               </div>
               <div class="hunonic-card-top-right">
-                ${getBatteryHunonicHtml(dev, isOnline)}
+                ${isPzemDevice(dev) ? getPzemTopRightHtml(dev, isOnline) : getBatteryHunonicHtml(dev, isOnline)}
                 ${getWifiHunonicSvg(isOnline)}
               </div>
             </div>
             <div class="hunonic-card-bottom" style="pointer-events: none;">
-              ${dev.type === "sensor" ? getSensorCardTopMetricsHtml(dev, isOnline) : ''}
+              ${dev.type === "sensor" ? getSensorCardTopMetricsHtml(dev, isOnline) : (isPzemDevice(dev) ? getPzemCardTopMetricsHtml(dev, isOnline) : '')}
               <h4 class="hunonic-card-title">${escapeHtml(dev.name)}</h4>
               <div class="hunonic-card-sub ${isOnline ? 'on' : ''}">${subText}</div>
             </div>
@@ -2917,6 +3211,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderDevices() {
     foundHub = getActiveIrHub();
     refreshPresencePanel();
+    refreshPzemPanel();
     renderDashboardRoomFilters();
     if (currentHubView) {
       const liveDev = customDevices.find(d => currentHubView.dev && d.id === currentHubView.dev.id) || foundHub;
@@ -2927,6 +3222,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!foundHub) document.querySelectorAll('[data-gw-action="open_ir_hub"]').forEach(card => card.remove());
       if (localStorage.getItem("gate_sensor_deleted") === "true" || !customDevices.some(d => d.type === "sensor")) {
         document.querySelectorAll('.subview-gw-child[data-gw-action="open_sensor"], .subview-gw-child[data-id*="espnow"], .subview-gw-child[data-id*="sensor"]').forEach(card => card.remove());
+      }
+      if (localStorage.getItem("gate_pzem_deleted") === "true" || !customDevices.some(d => isPzemDevice(d))) {
+        document.querySelectorAll('.subview-gw-child[data-id*="pzem"]').forEach(card => card.remove());
       }
       return;
     }
@@ -3029,6 +3327,9 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (dev.type === "sensor") {
         iconSvg = getSensorHexSvg();
         subText = getSensorCardDetailHtml(dev, isOnline);
+      } else if (isPzemDevice(dev)) {
+        iconSvg = getPzemHexSvg();
+        subText = getPzemCardDetailHtml(dev, isOnline);
       }
 
       customCardsHtml += `
@@ -3038,12 +3339,12 @@ document.addEventListener("DOMContentLoaded", () => {
               ${iconSvg}
             </div>
             <div class="hunonic-card-top-right">
-              ${getBatteryHunonicHtml(dev, isOnline)}
+              ${isPzemDevice(dev) ? getPzemTopRightHtml(dev, isOnline) : getBatteryHunonicHtml(dev, isOnline)}
               ${getWifiHunonicSvg(isOnline)}
             </div>
           </div>
           <div class="hunonic-card-bottom">
-            ${dev.type === "sensor" ? getSensorCardTopMetricsHtml(dev, isOnline) : ''}
+            ${dev.type === "sensor" ? getSensorCardTopMetricsHtml(dev, isOnline) : (isPzemDevice(dev) ? getPzemCardTopMetricsHtml(dev, isOnline) : '')}
             <h4 class="hunonic-card-title">${escapeHtml(dev.name)}</h4>
             <div class="hunonic-card-sub ${isOn || isOnline ? 'on' : ''}">${subText}</div>
           </div>
@@ -4211,6 +4512,24 @@ document.addEventListener("DOMContentLoaded", () => {
           details: `Nhiệt độ: ${sensorData.temp.toFixed(1)}°C • ${sensorData.hum > 120 ? 'Áp suất' : 'Độ ẩm'}: ${sensorData.hum.toFixed(1)}${sensorData.hum > 120 ? ' hPa' : '%'} • Pin: ${sensorData.batt.toFixed(2)}V`
         });
       }
+
+      // 3. Bộ Đo Điện Năng PZEM-004T: Hiện khi thực sự có dữ liệu và trực tuyến
+      const hasRealPzem = Boolean(
+        isGatewayOnline &&
+        pzemData.hasData &&
+        pzemData.isOnline === true
+      );
+      if (hasRealPzem) {
+        discList.push({
+          id: "dev_pzem_meter_1",
+          name: "Đo Điện Năng PZEM",
+          type: "pzem",
+          source: "STM32 UART 115200",
+          device_id: "pzem_004t",
+          online: true,
+          details: `Điện áp: ${pzemData.voltage.toFixed(1)}V • Công suất: ${pzemData.power.toFixed(1)}W • Dòng: ${pzemData.current.toFixed(2)}A • Tích lũy: ${pzemData.energy.toFixed(3)} kWh`
+        });
+      }
     }
 
     discList = discList.filter(d => d.type !== "relay" && d.type !== "socket");
@@ -4234,13 +4553,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const isAlreadyAdded = customDevices.some(d => 
         d.id === item.id || 
         d.name === item.name || 
-        (d.type === item.type && (item.type === "ac" || item.type === "ir_hub" || item.type === "sensor")) ||
+        (d.type === item.type && (item.type === "ac" || item.type === "ir_hub" || item.type === "sensor" || item.type === "pzem")) ||
         (item.device_id && (d.device_id === item.device_id || (d.extra && d.extra.includes(item.device_id))))
       );
 
       const isIrHub = item.type === "ir_hub";
-      const iconClass = isIrHub ? "ir-hub" : (item.type === "ac" ? "ac" : (item.type === "sensor" ? "sensor" : (idx === 2 ? "relay1" : "relay2")));
-      const faIcon = isIrHub ? "fa-tower-broadcast" : (item.type === "ac" ? "fa-wind" : (item.type === "sensor" ? "fa-satellite-dish" : "fa-lightbulb"));
+      const isPzem = item.type === "pzem";
+      const iconClass = isIrHub ? "ir-hub" : (item.type === "ac" ? "ac" : (item.type === "sensor" ? "sensor" : (isPzem ? "pzem" : (idx === 2 ? "relay1" : "relay2"))));
+      const faIcon = isIrHub ? "fa-tower-broadcast" : (item.type === "ac" ? "fa-wind" : (item.type === "sensor" ? "fa-satellite-dish" : (isPzem ? "fa-bolt" : "fa-lightbulb")));
       const isOnline = item.online !== false;
 
       cardsHtml += `
@@ -4307,6 +4627,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (newDev.type === "sensor" || type === "sensor" || (devId && devId.includes("sensor"))) {
           localStorage.removeItem("gate_sensor_deleted");
+        }
+        if (type === "pzem" || isPzemDevice(newDev)) {
+          localStorage.removeItem("gate_pzem_deleted");
         }
         customDevices.push(newDev);
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
@@ -4518,6 +4841,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!isGatewayOnline) {
         gwMetrics.ac_online = false;
         gwMetrics.ac_offline_reason = "Trạm Gateway ESP32-S3 đang ngoại tuyến (Offline)";
+        pzemData.isOnline = false;
         customDevices.forEach(cd => {
           cd.online = false;
           cd.state = 0;
@@ -4541,6 +4865,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 cd.children.forEach(ch => ch.power = 0);
               }
             }
+          }
+        });
+      }
+
+      // Cập nhật dữ liệu từ Bộ Đo Điện Năng PZEM-004T (STM32)
+      if (d.pzem && typeof d.pzem === "object") {
+        const pz = d.pzem;
+        pzemData.voltage = Number(pz.voltage) || 0.0;
+        pzemData.current = Number(pz.current) || 0.0;
+        pzemData.power = Number(pz.power) || 0.0;
+        pzemData.energy = Number(pz.energy) || 0.0;
+        pzemData.frequency = Number(pz.frequency) || 50.0;
+        pzemData.pf = Number(pz.pf) || 1.0;
+        pzemData.lastSeen = pz.last_seen || null;
+        pzemData.hasData = Boolean(pzemData.voltage > 0 || pzemData.current > 0 || pzemData.power > 0 || pzemData.energy > 0);
+        pzemData.isOnline = Boolean(isGatewayOnline && pz.is_online && pzemData.hasData);
+
+        customDevices.forEach(cd => {
+          if (isPzemDevice(cd)) {
+            cd.online = pzemData.isOnline;
+          }
+        });
+      } else {
+        pzemData.isOnline = false;
+        pzemData.hasData = false;
+        customDevices.forEach(cd => {
+          if (isPzemDevice(cd)) {
+            cd.online = false;
           }
         });
       }
@@ -4668,12 +5020,15 @@ document.addEventListener("DOMContentLoaded", () => {
             updateDrawerAcUI(curDev);
           } else if (curDev.type === "ir_hub") {
             renderIrChildList(curDev);
+          } else if (isPzemDevice(curDev)) {
+            refreshPzemPanel();
           }
         }
       }
     } else {
       isGatewayOnline = false;
       gwMetrics.ac_online = false;
+      pzemData.isOnline = false;
       gwMetrics.ac_offline_reason = "Mất kết nối máy chủ / Gateway ngoại tuyến";
       customDevices.forEach(cd => {
         cd.online = false;

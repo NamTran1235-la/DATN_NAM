@@ -5,11 +5,39 @@ from typing import List, Optional
 from app.database import get_session
 from app.auth import get_current_user
 from app.models import SensorRecord
-from app.mqtt_service import latest_sensor_data
+from app.mqtt_service import latest_sensor_data, latest_pzem_data, latest_gateway_status
 
 router = APIRouter(prefix="/sensors", tags=["4. Cảm biến Môi trường & Hiện diện (Sensors & ESP-NOW)"])
 
 from datetime import datetime, timezone
+
+@router.get(
+    "/pzem/latest",
+    summary="Lấy dữ liệu đo điện PZEM-004T mới nhất tức thời",
+    description="Truy xuất bản tin đo điện PZEM-004T từ STM32F103 (Điện áp, Dòng điện, Công suất, Năng lượng, Tần số, Hệ số PF)."
+)
+def get_latest_pzem_data(current_user: dict = Depends(get_current_user)):
+    last_seen_str = latest_pzem_data.get("last_seen")
+    seconds_ago = 999999
+    is_online = False
+    gw_online = latest_gateway_status.get("online", False)
+    if last_seen_str and gw_online:
+        try:
+            s_dt = datetime.fromisoformat(last_seen_str)
+            if s_dt.tzinfo is None:
+                s_dt = s_dt.replace(tzinfo=timezone.utc)
+            seconds_ago = (datetime.now(timezone.utc) - s_dt).total_seconds()
+            is_online = (seconds_ago <= 15)
+        except Exception:
+            pass
+
+    data_copy = dict(latest_pzem_data)
+    data_copy["seconds_ago"] = max(0, int(seconds_ago))
+    data_copy["is_online"] = is_online
+    return {
+        "success": True,
+        "data": data_copy
+    }
 
 @router.get(
     "/latest",
