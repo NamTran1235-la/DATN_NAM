@@ -2466,9 +2466,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getWifiHunonicSvg(isOnline) {
-    if (!isOnline) {
-      return `<span aria-label="Thiết bị mất kết nối" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;padding:4px 6px;border-radius:999px;background:#fff7ed;border:1px solid #ffedd5;color:#b45309;font-size:9px;font-weight:600;line-height:1.2;"><span aria-hidden="true" style="width:5px;height:5px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></span>Mất kết nối</span>`;
-    }
     const color = isOnline ? "#00b06f" : "#94a3b8";
     return `
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" class="wifi-icon-hunonic ${isOnline ? '' : 'offline'}">
