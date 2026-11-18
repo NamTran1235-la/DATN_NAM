@@ -6066,54 +6066,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const NOTIF_STORAGE_KEY = "gate_system_notifications";
   let currentNotifFilter = "all";
 
-  const DEFAULT_NOTIFICATIONS = [
-    {
-      id: "notif_default_1",
-      type: "presence",
-      title: "Phát hiện có người trong phòng",
-      message: "Radar LD2410B ghi nhận chuyển động tại khu vực giám sát phòng khách.",
-      time: new Date(Date.now() - 3 * 60000).toISOString(),
-      read: false,
-      badge: "Hiện diện"
-    },
-    {
-      id: "notif_default_2",
-      type: "automation",
-      title: "Kích hoạt tự động hóa: Eco Presence",
-      message: "Phòng trống ≥ 5 phút: Hệ thống tự động tắt Điều hòa và ngắt Relay 1 (Đèn chính).",
-      time: new Date(Date.now() - 18 * 60000).toISOString(),
-      read: false,
-      badge: "Tự động"
-    },
-    {
-      id: "notif_default_3",
-      type: "device",
-      title: "Gateway ESP32-S3 đã kết nối Cloud",
-      message: "Trạm Gateway kết nối thành công tới HiveMQ Broker (SSL/TLS MQTTS port 8883).",
-      time: new Date(Date.now() - 42 * 60000).toISOString(),
-      read: false,
-      badge: "Hệ thống"
-    },
-    {
-      id: "notif_default_4",
-      type: "alert",
-      title: "Cảnh báo độ ẩm phòng cao (77%)",
-      message: "Cảm biến SHT30 đo độ ẩm phòng khách vượt ngưỡng tiêu chuẩn khuyến nghị (40% - 60%).",
-      time: new Date(Date.now() - 2 * 3600000).toISOString(),
-      read: true,
-      badge: "Cảnh báo"
-    }
-  ];
+  const DEFAULT_NOTIFICATIONS = [];
 
   function getStoredNotifications() {
     try {
+      if (localStorage.getItem("gate_notifs_v3") !== "true") {
+        localStorage.setItem("gate_notifs_v3", "true");
+        let stored = localStorage.getItem(NOTIF_STORAGE_KEY);
+        if (stored) {
+          let list = JSON.parse(stored);
+          if (Array.isArray(list)) {
+            list = list.filter(n => n.id && !n.id.startsWith("notif_default_"));
+            localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(list));
+            return list;
+          }
+        }
+        localStorage.setItem(NOTIF_STORAGE_KEY, "[]");
+        return [];
+      }
       const stored = localStorage.getItem(NOTIF_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter(n => n.id && !n.id.startsWith("notif_default_"));
+        }
       }
     } catch (e) {}
-    return DEFAULT_NOTIFICATIONS;
+    return [];
   }
 
   function saveStoredNotifications(list) {
