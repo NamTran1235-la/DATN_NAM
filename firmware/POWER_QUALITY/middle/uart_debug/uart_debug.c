@@ -22,9 +22,9 @@ void uart_debug_init(uint32_t baudrate) {
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(DEBUG_UART_GPIO_PORT, &GPIO_InitStructure);
 
-  /* Cấu hình chân RX (PA10) là Input Floating */
+  /* Cấu hình chân RX (PA10) là Input Pull-up để chống nhiễu/treo khi rút dây */
   GPIO_InitStructure.GPIO_Pin = DEBUG_UART_RX_PIN;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
   GPIO_Init(DEBUG_UART_GPIO_PORT, &GPIO_InitStructure);
 
   USART_InitStructure.USART_BaudRate = baudrate;
@@ -117,15 +117,19 @@ void uart_debug_flush(void) {
  * @brief  Trình phục vụ ngắt USART1 nhận dữ liệu vào Ring Buffer
  */
 void USART1_IRQHandler(void) {
-  if (USART_GetITStatus(DEBUG_UART, USART_IT_RXNE) != RESET) {
-    uint8_t data = (uint8_t)USART_ReceiveData(DEBUG_UART);
-    uart_debug_rx_handler(data);
-    USART_ClearITPendingBit(DEBUG_UART, USART_IT_RXNE);
+  uint16_t sr = DEBUG_UART->SR;
+
+  if (sr & USART_SR_RXNE) {
+    uint8_t data = (uint8_t)(DEBUG_UART->DR & 0xFF);
+    /* Chỉ ghi nhận byte nếu không bị lỗi Framing (ngắt dây/nhiễu) hoặc Noise */
+    if (!(sr & (USART_SR_FE | USART_SR_NE))) {
+      uart_debug_rx_handler(data);
+    }
   }
 
-  /* Xóa lỗi Overrun (ORE) nếu có để tránh kẹt ngắt */
-  if (USART_GetFlagStatus(DEBUG_UART, USART_FLAG_ORE) != RESET) {
-    (void)USART_ReceiveData(DEBUG_UART);
+  /* Xóa cờ lỗi Overrun (ORE) nếu có */
+  if (sr & USART_SR_ORE) {
+    (void)DEBUG_UART->DR;
   }
 }
 

@@ -20,11 +20,11 @@ typedef enum {
 #define ERROR APP_ERROR
 
 typedef struct {
-    a_state state;
-    a_state next_state;
-    uint32_t last_tx_time;
-    uint32_t last_rx_time;
-    bool is_gateway_connected;
+    volatile a_state state;
+    volatile a_state next_state;
+    volatile uint32_t last_tx_time;
+    volatile uint32_t last_rx_time;
+    volatile bool is_gateway_connected;
 } a_app;
 
 extern a_app app;
