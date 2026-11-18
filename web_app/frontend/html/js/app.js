@@ -222,6 +222,16 @@ document.addEventListener("DOMContentLoaded", () => {
   customDevices = customDevices.filter(d => d.type !== "relay" && d.type !== "socket");
   if (isSensorExplicitlyDeleted) {
     customDevices = customDevices.filter(d => d.type !== "sensor" && d.id !== "dev_espnow_node_1" && !(d.id && (d.id.includes("sensor") || d.id.includes("espnow"))));
+  } else if (!getActiveSensor()) {
+    const defaultSensor = {
+      id: "dev_espnow_node_1",
+      name: "Node Cảm Biến C3",
+      type: "sensor",
+      room: localStorage.getItem("gate_room") || "Phòng khách",
+      extra: "Cảm biến nhiệt độ, độ ẩm & hiện diện",
+      state: 1
+    };
+    customDevices.push(defaultSensor);
   }
   if (isPzemExplicitlyDeleted) {
     customDevices = customDevices.filter(d => !isPzemDevice(d));
@@ -240,16 +250,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── MIGRATION: Đảm bảo trạm IR trung tâm là thiết bị cha chứa danh sách điều hòa (MIRAGE, FUNIKI)
   let foundHub = getActiveIrHub();
-
-  // Nếu người dùng đã từng lưu danh sách và trong đó không có IR Hub -> đồng bộ flag đã xóa
-  if (hasSavedDevices && !foundHub) {
-    localStorage.setItem("gate_ir_hub_deleted", "true");
-  }
-
-  // Nếu người dùng đã từng lưu danh sách và trong đó không có Sensor -> đồng bộ flag đã xóa
-  if (hasSavedDevices && !getActiveSensor()) {
-    localStorage.setItem("gate_sensor_deleted", "true");
-  }
 
   // Chỉ khởi tạo mặc định nếu người dùng chưa từng lưu cấu hình và chưa từng chủ động xóa
   if (!hasSavedDevices && !foundHub && !isIrExplicitlyDeleted) {
