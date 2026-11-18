@@ -940,6 +940,101 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.callApi = callApi;
 
+  // ── ĐỒNG BỘ DANH SÁCH THIẾT BỊ VỚI SERVER DATABASE THEO TÀI KHOẢN ─────────
+  let saveUserDevicesTimer = null;
+  function saveUserDevicesToServer() {
+    if (!token) return;
+    if (saveUserDevicesTimer) clearTimeout(saveUserDevicesTimer);
+    saveUserDevicesTimer = setTimeout(async () => {
+      try {
+        const deletedFlags = {
+          gate_pzem_deleted: localStorage.getItem("gate_pzem_deleted") === "true",
+          gate_sensor_deleted: localStorage.getItem("gate_sensor_deleted") === "true",
+          gate_ir_hub_deleted: localStorage.getItem("gate_ir_hub_deleted") === "true"
+        };
+        await callApi("/api/user/devices", "POST", {
+          devices: customDevices,
+          deleted_flags: deletedFlags
+        });
+      } catch (err) {
+        console.warn("Lỗi lưu thiết bị lên máy chủ:", err);
+      }
+    }, 300);
+  }
+  window.saveUserDevicesToServer = saveUserDevicesToServer;
+
+  let isSyncingUserDevices = false;
+  async function syncUserDevicesFromServer() {
+    if (!token || isSyncingUserDevices) return;
+    isSyncingUserDevices = true;
+    try {
+      const res = await callApi("/api/user/devices");
+      if (res && res.success && res.data) {
+        if (res.data.has_config) {
+          const serverData = res.data;
+          const serverDevs = serverData.devices || [];
+          const flags = serverData.deleted_flags || {};
+
+          let hasChanges = false;
+
+          // 1. Đồng bộ cờ xóa
+          const curPzemDel = localStorage.getItem("gate_pzem_deleted") === "true";
+          const newPzemDel = Boolean(flags.gate_pzem_deleted);
+          if (curPzemDel !== newPzemDel) {
+            if (newPzemDel) localStorage.setItem("gate_pzem_deleted", "true");
+            else localStorage.removeItem("gate_pzem_deleted");
+            hasChanges = true;
+          }
+
+          const curSensorDel = localStorage.getItem("gate_sensor_deleted") === "true";
+          const newSensorDel = Boolean(flags.gate_sensor_deleted);
+          if (curSensorDel !== newSensorDel) {
+            if (newSensorDel) localStorage.setItem("gate_sensor_deleted", "true");
+            else localStorage.removeItem("gate_sensor_deleted");
+            hasChanges = true;
+          }
+
+          const curIrDel = localStorage.getItem("gate_ir_hub_deleted") === "true";
+          const newIrDel = Boolean(flags.gate_ir_hub_deleted);
+          if (curIrDel !== newIrDel) {
+            if (newIrDel) localStorage.setItem("gate_ir_hub_deleted", "true");
+            else localStorage.removeItem("gate_ir_hub_deleted");
+            hasChanges = true;
+          }
+
+          // 2. Đồng bộ danh sách customDevices
+          const curDevsStr = JSON.stringify(customDevices);
+          const srvDevsStr = JSON.stringify(serverDevs);
+          if (curDevsStr !== srvDevsStr) {
+            customDevices = serverDevs;
+            localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+            hasChanges = true;
+          }
+
+          if (hasChanges) {
+            foundHub = getActiveIrHub();
+            renderDevices();
+            renderDrawerChildList();
+          }
+        } else {
+          // Lần đầu tiên: đẩy cấu hình cục bộ hiện tại lên server lưu trữ
+          saveUserDevicesToServer();
+        }
+      }
+    } catch (err) {
+      console.warn("Lỗi đồng bộ thiết bị từ máy chủ:", err);
+    } finally {
+      isSyncingUserDevices = false;
+    }
+  }
+  window.syncUserDevicesFromServer = syncUserDevicesFromServer;
+
+  // Gọi đồng bộ ngay khi load trang và khi người dùng chuyển tab quay lại web
+  syncUserDevicesFromServer();
+  window.addEventListener("focus", syncUserDevicesFromServer);
+
+  let deviceSyncPollCounter = 0;
+
   // ── Định dạng Uptime ───────────────────────────────────────────────────────
   function formatUptime(seconds) {
     const hrs = Math.floor(seconds / 3600);
@@ -2427,6 +2522,7 @@ document.addEventListener("DOMContentLoaded", () => {
           foundHub = newDev;
           customDevices.unshift(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+          saveUserDevicesToServer();
           renderDrawerChildList();
           renderDrawerAvailableDevices();
           renderDevices();
@@ -2443,6 +2539,7 @@ document.addEventListener("DOMContentLoaded", () => {
           };
           customDevices.push(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+          saveUserDevicesToServer();
           renderDrawerChildList();
           renderDrawerAvailableDevices();
           renderDevices();
@@ -2459,6 +2556,7 @@ document.addEventListener("DOMContentLoaded", () => {
           };
           customDevices.push(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+          saveUserDevicesToServer();
           renderDrawerChildList();
           renderDrawerAvailableDevices();
           renderDevices();
@@ -2535,6 +2633,7 @@ document.addEventListener("DOMContentLoaded", () => {
           dev.name = newName;
           dev.room = newRoom;
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+          saveUserDevicesToServer();
           renderDevices();
           openChildDeviceDrawer(currentDrawerTarget);
           showToast(`Đã lưu thay đổi cho [${newName}]!`, "success");
@@ -2583,6 +2682,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
     foundHub = getActiveIrHub();
     renderDrawerAvailableDevices();
+    saveUserDevicesToServer();
   }
 
   // Nút "Xóa Thiết Bị Này" ("có xóa thiết bị")
@@ -4440,6 +4540,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       customDevices.push(newDev);
       localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+      saveUserDevicesToServer();
 
       renderDevices();
       renderDrawerChildList();
@@ -4633,6 +4734,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         customDevices.push(newDev);
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+        saveUserDevicesToServer();
 
         renderDevices();
         renderDrawerChildList();
@@ -5139,6 +5241,12 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       sensorData.isOnline = false;
       renderDevices();
+    }
+
+    // Đồng bộ định kỳ danh sách thiết bị từ máy chủ theo tài khoản
+    deviceSyncPollCounter = (deviceSyncPollCounter + 1) % 4;
+    if (deviceSyncPollCounter === 0) {
+      syncUserDevicesFromServer();
     }
 
     // Đánh giá logic tự động hóa thông minh (ECA Automation Engine)

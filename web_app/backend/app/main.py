@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 from app.config import settings
 from app.database import init_db
 from app.mqtt_service import start_mqtt_client, stop_mqtt_client
-from app.routers import auth_router, gateway_router, hvac_router, sensor_router
+from app.routers import auth_router, gateway_router, hvac_router, sensor_router, user_router
 
 # Thiết lập hệ thống ghi log
 logging.basicConfig(
@@ -71,6 +71,7 @@ app.add_middleware(
 
 # Đăng ký các Router API
 app.include_router(auth_router.router, prefix=settings.API_PREFIX)
+app.include_router(user_router.router, prefix=settings.API_PREFIX)
 app.include_router(gateway_router.router, prefix=settings.API_PREFIX)
 app.include_router(hvac_router.router, prefix=settings.API_PREFIX)
 app.include_router(sensor_router.router, prefix=settings.API_PREFIX)

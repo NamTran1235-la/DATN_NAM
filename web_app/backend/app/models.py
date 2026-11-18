@@ -69,9 +69,23 @@ class ControlAudit(SQLModel, table=True):
     created_at: datetime = Field(default_factory=get_utc_now, index=True)
 
 
+class UserDeviceConfig(SQLModel, table=True):
+    __tablename__ = "user_device_configs"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(unique=True, index=True)
+    devices_json: str = Field(default="[]")
+    deleted_flags_json: str = Field(default="{}")
+    updated_at: datetime = Field(default_factory=get_utc_now, index=True)
+
+
 # ==============================================================================
 # 2. REQUEST & RESPONSE SCHEMAS (API DTO)
 # ==============================================================================
+
+class UserDeviceConfigRequest(BaseModel):
+    devices: list = []
+    deleted_flags: Optional[dict] = {}
 
 class UserLoginRequest(BaseModel):
     username: str
