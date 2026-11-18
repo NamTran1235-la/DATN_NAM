@@ -544,6 +544,18 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  user-select: none;
+}
+
+.power-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 176, 111, 0.35);
+}
+
+.power-card:active {
+  transform: translateY(0);
 }
 
 .power-card-header {

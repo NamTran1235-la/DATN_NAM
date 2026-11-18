@@ -17,7 +17,7 @@
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=130">
+  <link rel="stylesheet" href="css/style.css?v=135">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -219,18 +219,18 @@
             </div>
 
             <!-- 2. Power / Energy Card (Emerald Green Gradient) -->
-            <div class="widget-card power-card">
+            <div class="widget-card power-card" id="card-power-widget" style="cursor: pointer;" title="Bấm để xem chi tiết thông số đo điện năng">
               <div class="power-card-header">
-                <span>Điện tiêu thụ tháng 10/2026 &bull; Chưa có thiết bị đo điện</span>
+                <span id="power-widget-header">Điện tiêu thụ &bull; Đang đồng bộ...</span>
               </div>
               <div class="power-card-value">
-                <span class="power-num">0.00</span>
+                <span class="power-num" id="power-widget-num">0.00</span>
                 <span class="power-unit">kWh</span>
               </div>
               <div class="power-card-footer">
-                <span>Tháng trước: 0.00 kWh</span>
-                <span class="power-diff-badge">
-                  <i class="fa-solid fa-arrow-trend-down"></i> Giảm 0% (0 kWh)
+                <span id="power-widget-sub">Tháng trước: 0.00 kWh</span>
+                <span class="power-diff-badge" id="power-widget-badge">
+                  <i class="fa-solid fa-bolt"></i> 0.0 W
                 </span>
               </div>
             </div>
@@ -2253,7 +2253,7 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="js/app.js?v=130"></script>
+  <script src="js/app.js?v=135"></script>
 </body>
 
 </html>

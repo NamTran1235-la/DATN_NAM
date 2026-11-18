@@ -72,6 +72,9 @@ def get_gateway_status(current_user: dict = Depends(get_current_user)):
     latest_gateway_status["ac_hub_last_online"] = hun_info.get("hub_last_online")
 
     # Watchdog kiểm tra trực tuyến của module đo điện PZEM-004T (STM32 UART)
+    if "pzem" not in latest_gateway_status or latest_gateway_status["pzem"] is None:
+        latest_gateway_status["pzem"] = latest_pzem_data
+
     if "pzem" in latest_gateway_status and isinstance(latest_gateway_status["pzem"], dict):
         pz_last = latest_gateway_status["pzem"].get("last_seen")
         if pz_last and gw_online:

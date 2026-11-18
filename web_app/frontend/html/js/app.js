@@ -2294,6 +2294,67 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+  // ── CẬP NHẬT THẺ WIDGET TỔNG QUAN ĐIỆN NĂNG (POWER CARD BANNER) ───────────────
+  function updatePowerSummaryWidget() {
+    const cardEl = document.getElementById("card-power-widget");
+    const headerEl = document.getElementById("power-widget-header");
+    const valEl = document.getElementById("power-widget-num");
+    const subEl = document.getElementById("power-widget-sub");
+    const badgeEl = document.getElementById("power-widget-badge");
+
+    if (!cardEl && !valEl) return;
+
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    const monthStr = `Điện tiêu thụ tháng ${currentMonth}/${currentYear}`;
+
+    const pzemDev = getActivePzem();
+    const isPzemDeleted = localStorage.getItem("gate_pzem_deleted") === "true";
+
+    if (!pzemDev || isPzemDeleted) {
+      if (headerEl) headerEl.innerHTML = `${monthStr} &bull; Chưa có thiết bị đo điện`;
+      if (valEl) valEl.innerText = "0.00";
+      if (subEl) subEl.innerText = "Tháng trước: 0.00 kWh";
+      if (badgeEl) {
+        badgeEl.innerHTML = `<i class="fa-solid fa-circle-minus"></i> Chưa kết nối`;
+        badgeEl.style.background = "rgba(255, 255, 255, 0.2)";
+      }
+      return;
+    }
+
+    const devName = escapeHtml(pzemDev.name || "Đo Điện Năng");
+    const isOnline = isDeviceOnline(pzemDev);
+
+    if (isOnline && pzemData.hasData) {
+      if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName}`;
+      if (valEl) valEl.innerText = pzemData.energy > 0 ? pzemData.energy.toFixed(2) : "0.00";
+      if (subEl) subEl.innerHTML = `⚡ ${pzemData.voltage.toFixed(1)}V &bull; ${pzemData.current.toFixed(2)}A`;
+      if (badgeEl) {
+        badgeEl.innerHTML = `<i class="fa-solid fa-bolt"></i> ${pzemData.power.toFixed(1)} W`;
+        badgeEl.style.background = "rgba(255, 255, 255, 0.25)";
+      }
+    } else if (isGatewayOnline && !pzemData.hasData) {
+      if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName}`;
+      if (valEl) valEl.innerText = "0.00";
+      if (subEl) subEl.innerText = "Chờ dữ liệu từ STM32...";
+      if (badgeEl) {
+        badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Chờ dữ liệu`;
+        badgeEl.style.background = "rgba(255, 255, 255, 0.2)";
+      }
+    } else {
+      if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName} (Ngoại tuyến)`;
+      if (valEl) valEl.innerText = pzemData.energy > 0 ? pzemData.energy.toFixed(2) : "0.00";
+      const timeStr = (typeof formatTimeAgo === "function" && pzemData.lastSeen) ? formatTimeAgo(pzemData.lastSeen) : null;
+      if (subEl) subEl.innerText = timeStr ? `Lần cuối: ${timeStr}` : "Mất kết nối thiết bị đo";
+      if (badgeEl) {
+        badgeEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Ngoại tuyến`;
+        badgeEl.style.background = "rgba(239, 68, 68, 0.35)";
+      }
+    }
+  }
+  window.updatePowerSummaryWidget = updatePowerSummaryWidget;
+
   function openChildDeviceDrawer(devId) {
     let dev = customDevices.find(d => d.id === devId);
     if (!dev && (devId === "dev_espnow_node_1" || (typeof devId === "string" && (devId.includes("espnow") || devId.includes("sensor"))))) {
@@ -3708,6 +3769,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (countDevicesOn) countDevicesOn.innerText = onCount.toString().padStart(2, '0');
     if (countDevicesOff) countDevicesOff.innerText = offCount.toString().padStart(2, '0');
     if (countDevicesOffline) countDevicesOffline.innerText = offlineCount.toString().padStart(2, '0');
+
+    // Cập nhật thẻ widget tổng quan điện năng
+    updatePowerSummaryWidget();
+  }
+
+  // Bấm vào thẻ widget điện năng trên Dashboard để mở ngay drawer đo điện PZEM
+  const cardPowerWidget = document.getElementById("card-power-widget");
+  if (cardPowerWidget) {
+    cardPowerWidget.addEventListener("click", () => {
+      const pz = getActivePzem();
+      if (pz) {
+        openChildDeviceDrawer(pz.id);
+      } else {
+        showToast("Chưa có thiết bị Đo Điện Năng trên hệ thống.", "info");
+      }
+    });
   }
 
   // Tap opens devices; hold/right-click opens the existing settings drawer.
@@ -5384,6 +5461,33 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       sensorData.isOnline = false;
       renderDevices();
+    }
+
+    // 3. Lấy dữ liệu đo điện PZEM-004T mới nhất từ API /api/sensors/pzem/latest
+    try {
+      const pzemRes = await callApi("/api/sensors/pzem/latest");
+      if (pzemRes && pzemRes.success && pzemRes.data) {
+        const pz = pzemRes.data;
+        if (pz.voltage !== undefined || pz.energy !== undefined) {
+          pzemData.voltage = Number(pz.voltage) || 0.0;
+          pzemData.current = Number(pz.current) || 0.0;
+          pzemData.power = Number(pz.power) || 0.0;
+          pzemData.energy = Number(pz.energy) || 0.0;
+          pzemData.frequency = Number(pz.frequency) || 50.0;
+          pzemData.pf = Number(pz.pf) || 1.0;
+          pzemData.lastSeen = pz.last_seen || null;
+          pzemData.hasData = Boolean(pzemData.voltage > 0 || pzemData.current > 0 || pzemData.power > 0 || pzemData.energy > 0);
+          pzemData.isOnline = Boolean(isGatewayOnline && pz.is_online && pzemData.hasData);
+          customDevices.forEach(cd => {
+            if (isPzemDevice(cd)) {
+              cd.online = pzemData.isOnline;
+            }
+          });
+          updatePowerSummaryWidget();
+        }
+      }
+    } catch (e) {
+      console.warn("Lỗi đồng bộ API PZEM:", e);
     }
 
     // Đồng bộ định kỳ danh sách thiết bị từ máy chủ theo tài khoản
