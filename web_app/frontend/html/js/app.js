@@ -732,10 +732,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 5. Ẩn / Hiện mật khẩu Wi-Fi
   if (btnToggleBlePass && bleWifiPassInput && passEyeIcon) {
-    btnToggleBlePass.addEventListener("click", () => {
+    btnToggleBlePass.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const isPass = bleWifiPassInput.type === "password";
       bleWifiPassInput.type = isPass ? "text" : "password";
       passEyeIcon.className = isPass ? "fa-solid fa-eye-slash" : "fa-solid fa-eye";
+      bleWifiPassInput.focus();
     });
   }
 

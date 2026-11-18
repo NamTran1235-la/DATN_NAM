@@ -1787,18 +1787,24 @@ body {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
-.input-with-icon i {
+.input-with-icon > i,
+.input-with-icon .input-icon-left {
   position: absolute;
   left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #94a3b8;
   font-size: 1rem;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .input-with-icon input {
   width: 100%;
-  padding: 13px 44px 13px 44px;
+  padding: 13px 46px 13px 44px;
   border: 1.5px solid #cbd5e1;
   border-radius: 12px;
   font-size: 0.95rem;
@@ -1813,19 +1819,45 @@ body {
   box-shadow: 0 0 0 3px rgba(0, 176, 111, 0.15);
 }
 
+/* Ẩn con mắt tự sinh của Edge / IE */
+.input-with-icon input[type="password"]::-ms-reveal,
+.input-with-icon input[type="password"]::-ms-clear {
+  display: none;
+}
+
 .btn-eye-toggle {
   position: absolute;
   right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
   color: #64748b;
-  padding: 6px;
-  font-size: 1rem;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+  z-index: 2;
 }
 
 .btn-eye-toggle:hover {
   color: #0f172a;
+  background: #f1f5f9;
+}
+
+.btn-eye-toggle i {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  color: inherit !important;
+  font-size: 1.05rem !important;
+  pointer-events: none;
 }
 
 .wifi-action-buttons {
