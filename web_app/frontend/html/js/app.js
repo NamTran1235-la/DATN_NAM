@@ -1307,7 +1307,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     // Bộ Đo Điện Năng PZEM-004T STM32
     if (isPzemDevice(dev)) {
-      return Boolean(isGatewayOnline && pzemData.isOnline && pzemData.hasData);
+      return Boolean(isGatewayOnline && pzemData.isOnline);
     }
     // Node Cảm biến ESP-NOW: Node phải thực sự đang trực tuyến VÀ có dữ liệu hợp lệ
     if (dev.type === "sensor" || dev.id === "dev_espnow_node_1" || (dev.id && dev.id.includes("espnow")) || (dev.name && dev.name.toLowerCase().includes("node cảm biến"))) {
@@ -2210,7 +2210,7 @@ document.addEventListener("DOMContentLoaded", () => {
     panel.style.display = visible ? "block" : "none";
     if (!visible) return;
 
-    const online = isDeviceOnline(dev) && pzemData.hasData;
+    const online = isDeviceOnline(dev);
     const color = online ? "#059669" : "#ef4444";
     const statusLabel = online ? "Đang Đo Lường Realtime" : "Mất Kết Nối STM32";
 
@@ -2326,21 +2326,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const devName = escapeHtml(pzemDev.name || "Đo Điện Năng");
     const isOnline = isDeviceOnline(pzemDev);
 
-    if (isOnline && pzemData.hasData) {
+    if (isOnline) {
       if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName}`;
       if (valEl) valEl.innerText = pzemData.energy > 0 ? pzemData.energy.toFixed(2) : "0.00";
       if (subEl) subEl.innerHTML = `⚡ ${pzemData.voltage.toFixed(1)}V &bull; ${pzemData.current.toFixed(2)}A`;
       if (badgeEl) {
         badgeEl.innerHTML = `<i class="fa-solid fa-bolt"></i> ${pzemData.power.toFixed(1)} W`;
         badgeEl.style.background = "rgba(255, 255, 255, 0.25)";
-      }
-    } else if (isGatewayOnline && !pzemData.hasData) {
-      if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName}`;
-      if (valEl) valEl.innerText = "0.00";
-      if (subEl) subEl.innerText = "Chờ dữ liệu từ STM32...";
-      if (badgeEl) {
-        badgeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Chờ dữ liệu`;
-        badgeEl.style.background = "rgba(255, 255, 255, 0.2)";
       }
     } else {
       if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName} (Ngoại tuyến)`;
@@ -2644,7 +2636,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // 3. Bộ đo điện PZEM: Phải kết nối được Gateway VÀ module đang gửi dữ liệu qua UART
     const isPzemScanned = Boolean(
       isGatewayOnline &&
-      pzemData.hasData &&
       pzemData.isOnline === true
     );
 
@@ -3185,7 +3176,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isOnline) {
       return `<span class="sensor-batt-pill offline" title="Bộ đo điện: Ngoại tuyến"><i class="fa-solid fa-bolt"></i> <span>--</span></span>`;
     }
-    const voltStr = pzemData.voltage > 0 ? `${pzemData.voltage.toFixed(1)}V` : "--V";
+    const voltStr = `${pzemData.voltage.toFixed(1)}V`;
     return `<span class="sensor-batt-pill" title="Điện áp lưới: ${voltStr}" style="color:#d97706;border-color:#f59e0b40;background:#fffbeb;"><i class="fa-solid fa-bolt"></i> <span>${voltStr}</span></span>`;
   }
 
@@ -3198,8 +3189,8 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-    const pStr = pzemData.power > 0 ? `${pzemData.power.toFixed(1)} W` : "0.0 W";
-    const aStr = pzemData.current > 0 ? `${pzemData.current.toFixed(2)} A` : "0.00 A";
+    const pStr = `${pzemData.power.toFixed(1)} W`;
+    const aStr = `${pzemData.current.toFixed(2)} A`;
 
     return `
       <div class="sensor-metric-row above-title">
@@ -3224,7 +3215,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-    const kwhVal = pzemData.energy > 0 ? `${pzemData.energy.toFixed(2)} kWh` : "0.00 kWh";
+    const kwhVal = `${pzemData.energy.toFixed(2)} kWh`;
     return `
       <div class="sensor-status-row">
         <span class="sensor-status-chip presence" title="Điện năng tiêu thụ tích lũy: ${pzemData.energy.toFixed(3)} kWh" style="color: #059669; font-weight: 600;">
@@ -4834,10 +4825,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      // 3. Bộ Đo Điện Năng PZEM-004T: Hiện khi thực sự có dữ liệu và trực tuyến
+      // 3. Bộ Đo Điện Năng PZEM-004T: Hiện khi module trực tuyến
       const hasRealPzem = Boolean(
         isGatewayOnline &&
-        pzemData.hasData &&
         pzemData.isOnline === true
       );
       if (hasRealPzem) {
@@ -5201,8 +5191,8 @@ document.addEventListener("DOMContentLoaded", () => {
         pzemData.frequency = Number(pz.frequency) || 50.0;
         pzemData.pf = Number(pz.pf) || 1.0;
         pzemData.lastSeen = pz.last_seen || null;
-        pzemData.hasData = Boolean(pzemData.voltage > 0 || pzemData.current > 0 || pzemData.power > 0 || pzemData.energy > 0);
-        pzemData.isOnline = Boolean(isGatewayOnline && pz.is_online && pzemData.hasData);
+        pzemData.hasData = Boolean(pz.last_seen);
+        pzemData.isOnline = Boolean(isGatewayOnline && pz.is_online);
 
         customDevices.forEach(cd => {
           if (isPzemDevice(cd)) {
@@ -5476,8 +5466,8 @@ document.addEventListener("DOMContentLoaded", () => {
           pzemData.frequency = Number(pz.frequency) || 50.0;
           pzemData.pf = Number(pz.pf) || 1.0;
           pzemData.lastSeen = pz.last_seen || null;
-          pzemData.hasData = Boolean(pzemData.voltage > 0 || pzemData.current > 0 || pzemData.power > 0 || pzemData.energy > 0);
-          pzemData.isOnline = Boolean(isGatewayOnline && pz.is_online && pzemData.hasData);
+          pzemData.hasData = Boolean(pz.last_seen);
+          pzemData.isOnline = Boolean(isGatewayOnline && pz.is_online);
           customDevices.forEach(cd => {
             if (isPzemDevice(cd)) {
               cd.online = pzemData.isOnline;
