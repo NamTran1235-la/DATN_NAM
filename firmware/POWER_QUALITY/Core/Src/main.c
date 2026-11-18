@@ -34,10 +34,10 @@ static void led_task(void *pvParameters) {
 
     while (1) {
         if (app.state == CONNECTED) {
-            led_on();
+            led_on(); /* Sáng và giữ ở sáng khi đã kết nối Gateway */
             vTaskDelay(pdMS_TO_TICKS(100));
         } else {
-            led_toggle();
+            led_toggle(); /* Nhấp nháy (blink) khi ngắt hoặc chưa kết nối */
             vTaskDelay(pdMS_TO_TICKS(300));
         }
     }

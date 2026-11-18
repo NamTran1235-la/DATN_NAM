@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "Hardware/delay/delay.h"
+#include "app/app.h"
 #include "stm32f10x.h"
 #include "third_party/ringbuff/ringbuff.h"
 
