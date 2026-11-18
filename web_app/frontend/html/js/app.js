@@ -2878,7 +2878,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="sensor-status-row">
         <span class="sensor-status-chip presence" title="Điện năng tiêu thụ tích lũy: ${pzemData.energy.toFixed(3)} kWh" style="color: #059669; font-weight: 600;">
           <i class="fa-solid fa-plug-circle-bolt" style="color: #059669;"></i>
-          <span>${kwhVal} • Hoạt động</span>
+          <span>${kwhVal}</span>
         </span>
       </div>
     `;
