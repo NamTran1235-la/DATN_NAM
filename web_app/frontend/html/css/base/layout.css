@@ -1,0 +1,424 @@
+/* ==============================================================================
+   HUNONIC DASHBOARD THEME (DATN_NAM)
+   Designed to replicate Hunonic Web App Interface
+   ============================================================================== */
+
+:root {
+  --hunonic-green: #00b06f;
+  --hunonic-green-hover: #00965e;
+  --hunonic-green-dark: #00663f;
+  --hunonic-green-light: #e6f9f0;
+  --hunonic-green-pill: #bbf7d0;
+  --bg-sidebar: #ffffff;
+  --bg-topbar: #ffffff;
+  --border-subtle: #edf2f7;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Outfit', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: #f1f5f9;
+}
+
+/* ── Main Layout: Sidebar + Content Area ────────────────────────────────── */
+.hunonic-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+}
+
+/* ==========================================================================
+   1. LEFT SIDEBAR
+   ========================================================================== */
+.hunonic-sidebar {
+  width: 250px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+/* Brand Header (Custom Gateway IoT Logo) */
+.sidebar-brand {
+  padding: 22px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.brand-logo-badge {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.brand-logo-badge:hover {
+  transform: rotate(8deg) scale(1.06);
+}
+
+.logo-svg-custom {
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 4px 10px rgba(0, 176, 111, 0.4));
+}
+
+.brand-text-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name-main {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.6px;
+  line-height: 1.1;
+}
+
+.brand-sub-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.brand-sub-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--hunonic-green);
+  letter-spacing: 0.5px;
+}
+
+.brand-version-tag {
+  font-size: 0.6rem;
+  font-weight: 800;
+  background: var(--hunonic-green);
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Sidebar Nav */
+.sidebar-nav {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  color: #475569;
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.nav-icon {
+  font-size: 1.15rem;
+  width: 22px;
+  text-align: center;
+  color: #64748b;
+  transition: color 0.2s;
+}
+
+.nav-item:hover {
+  background: #f8fafc;
+  color: var(--hunonic-green);
+}
+
+.nav-item:hover .nav-icon {
+  color: var(--hunonic-green);
+}
+
+.nav-item.active {
+  background: var(--hunonic-green-light);
+  color: var(--hunonic-green);
+}
+
+.nav-item.active .nav-icon {
+  color: var(--hunonic-green);
+}
+
+.nav-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 12px 0;
+}
+
+.nav-docs {
+  color: #2563eb;
+}
+
+.nav-docs:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.nav-docs .nav-icon {
+  color: #3b82f6;
+}
+
+.nav-logout:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.nav-logout:hover .nav-icon {
+  color: #ef4444;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  padding: 18px 20px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.gate-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.gate-status-dot.online {
+  background: var(--hunonic-green);
+  box-shadow: 0 0 8px rgba(0, 176, 111, 0.6);
+}
+
+.gate-status-dot.offline {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+/* ==========================================================================
+   2. MAIN CONTENT AREA (MODERN LUXURY SMART HOME BACKGROUND)
+   ========================================================================== */
+.hunonic-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+  background: 
+    linear-gradient(rgba(15, 23, 42, 0.32), rgba(15, 23, 42, 0.45)),
+    url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat fixed;
+}
+
+/* ── Top Bar ────────────────────────────────────────────────────────────── */
+.hunonic-topbar {
+  height: 64px;
+  background: rgba(255, 255, 255, 0.98);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  backdrop-filter: blur(10px);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.topbar-btn:hover {
+  background: #f8fafc;
+  color: var(--hunonic-green);
+}
+
+#btn-toggle-sidebar {
+  display: none;
+}
+
+/* Home Dropdown */
+.home-dropdown-wrap {
+  position: relative;
+}
+
+.home-dropdown-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.home-dropdown-current .arrow-icon {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.home-dropdown-menu {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  min-width: 220px;
+  padding: 6px;
+  z-index: 100;
+}
+
+.home-dropdown-item {
+  padding: 9px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #475569;
+  cursor: pointer;
+}
+
+.home-dropdown-item:hover,
+.home-dropdown-item.active {
+  background: var(--hunonic-green-light);
+  color: var(--hunonic-green);
+  font-weight: 600;
+}
+
+/* Topbar Right */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mqtt-pill-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--hunonic-green-light);
+  border-radius: 9999px;
+  color: var(--hunonic-green-dark);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.mqtt-pill-badge.offline {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hunonic-green);
+  animation: pulseGreen 1.5s infinite;
+}
+
+.mqtt-pill-badge.offline .pulse-dot {
+  background: #ef4444;
+  animation: pulseRed 1.5s infinite;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 176, 111, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 176, 111, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 176, 111, 0); }
+}
+
+@keyframes pulseRed {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.user-avatar-ring {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--hunonic-green);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.user-avatar-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--hunonic-green-light);
+  color: var(--hunonic-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+/* ── Content Body ───────────────────────────────────────────────────────── */
+.hunonic-content {
+  padding: 24px 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+

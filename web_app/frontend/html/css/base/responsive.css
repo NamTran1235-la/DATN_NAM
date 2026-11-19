@@ -1,0 +1,698 @@
+/* ==========================================================================
+   RESPONSIVE DESIGN (Tablets & Mobile)
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .top-widgets-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  #btn-toggle-sidebar {
+    display: flex;
+  }
+
+  .hunonic-sidebar {
+    position: fixed;
+    transform: translateX(-100%);
+  }
+
+  .hunonic-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .hunonic-content {
+    padding: 16px;
+  }
+
+  .devices-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+
+/* ==============================================================================
+   BACKDROP CHO SIDEBAR MOBILE
+   ============================================================================== */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1040;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none;
+}
+
+.sidebar-backdrop.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ==============================================================================
+   HỆ THỐNG RESPONSIVE TOÀN DIỆN (DESKTOP, TABLET & MOBILE SMARTPHONE)
+   ============================================================================== */
+
+/* ── 1. Tablet & Màn hình trung bình (<= 1024px) ────────────────────────────── */
+@media (max-width: 1024px) {
+  .hunonic-content {
+    padding: 20px 20px 36px;
+    gap: 20px;
+  }
+
+  .top-widgets-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .top-widgets-row .weather-card {
+    grid-column: span 2;
+  }
+
+  .devices-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+  }
+
+  .device-detail-drawer {
+    width: 440px;
+    max-width: 88vw;
+  }
+
+  .gateway-manage-card {
+    width: 92%;
+    max-height: 90vh;
+  }
+}
+
+/* ── 2. Mobile lớn & Tablet dọc (<= 768px) ─────────────────────────────────── */
+@media (max-width: 768px) {
+  #btn-toggle-sidebar {
+    display: flex !important;
+  }
+
+  .hunonic-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 82vw;
+    height: 100vh;
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.25);
+  }
+
+  .hunonic-sidebar.open {
+    transform: translateX(0) !important;
+  }
+
+  .hunonic-main-area {
+    width: 100vw;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .hunonic-topbar {
+    padding: 0 16px;
+    height: 58px;
+  }
+
+  .topbar-left {
+    gap: 8px;
+  }
+
+  .topbar-right {
+    gap: 10px;
+  }
+
+  #current-home-name {
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .top-widgets-row {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .top-widgets-row .weather-card {
+    grid-column: span 1;
+  }
+
+  /* Scenes row cuộn ngang mượt mà phong cách native app */
+  .scenes-chips-row {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 4px 4px 10px 4px;
+    margin: 0 -2px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .scenes-chips-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scene-chip {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    border-radius: 14px;
+    min-height: 46px;
+    gap: 10px;
+  }
+
+  .scene-chip-icon-box {
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+
+  .scene-chip-name {
+    font-size: 0.82rem;
+  }
+
+  .scene-chip-sub {
+    font-size: 0.68rem;
+  }
+
+  .btn-scene-del {
+    width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+    margin-left: 6px;
+    opacity: 0.8;
+  }
+
+  .devices-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .hunonic-device-card {
+    padding: 16px 14px;
+    min-height: 138px;
+  }
+
+  /* Room Management Responsive for Tablets & Mobile */
+  .room-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .room-stat-card {
+    padding: 10px 12px;
+    gap: 10px;
+    border-radius: 14px;
+  }
+
+  .room-stat-card .stat-icon-wrap {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+
+  .room-stat-card .stat-val {
+    font-size: 1.05rem;
+  }
+
+  .room-stat-card .stat-lbl {
+    font-size: 0.65rem;
+  }
+
+  .rooms-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .room-card {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .room-card-header {
+    gap: 8px;
+  }
+
+  .room-card-name {
+    font-size: 0.95rem;
+  }
+
+  .room-card-count {
+    font-size: 0.72rem;
+  }
+
+  .room-env-strip {
+    padding: 8px 10px;
+    gap: 8px;
+    font-size: 0.75rem;
+  }
+
+  .room-devices-box {
+    margin: 10px 0;
+  }
+
+  .room-card-footer {
+    gap: 8px;
+  }
+
+  .btn-room-off,
+  .btn-room-explore {
+    padding: 8px 12px;
+    font-size: 0.78rem;
+  }
+
+  .device-detail-drawer {
+    width: 420px;
+    max-width: 92vw;
+  }
+
+  .gateway-manage-card {
+    width: 95%;
+    max-height: 92vh;
+    border-radius: 20px;
+  }
+
+  .hvac-modal-card {
+    width: 95%;
+    max-height: 92vh;
+    border-radius: 20px;
+  }
+
+  .modal-body {
+    overflow-y: auto;
+    max-height: calc(92vh - 75px);
+  }
+
+  .gw-detail-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .gw-hero-actions {
+    width: 100%;
+  }
+
+  .gw-telemetry-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 3. Smartphone tiêu chuẩn & màn hình nhỏ (<= 480px) ──────────────────────── */
+@media (max-width: 480px) {
+  .hunonic-topbar {
+    padding: 0 10px;
+    height: 54px;
+    gap: 6px;
+  }
+
+  #btn-toggle-sidebar,
+  .topbar-btn {
+    width: 33px;
+    height: 33px;
+    font-size: 0.82rem;
+  }
+
+  .home-dropdown-current {
+    padding: 5px 8px;
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+
+  #current-home-name {
+    max-width: 105px;
+  }
+
+  .topbar-right {
+    gap: 6px;
+  }
+
+  .mqtt-pill-badge {
+    padding: 4px 8px;
+    gap: 5px;
+  }
+
+  #mqtt-status-text {
+    display: none;
+  }
+
+  .user-avatar-ring {
+    width: 32px;
+    height: 32px;
+  }
+
+  .hunonic-content {
+    padding: 12px 10px 28px;
+    gap: 14px;
+  }
+
+  /* Weather card co giãn linh hoạt */
+  .weather-card {
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 14px;
+  }
+
+  .weather-right {
+    align-items: stretch;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .weather-forecast-strip {
+    width: 100%;
+    justify-content: space-around;
+    padding: 6px 8px;
+  }
+
+  .weather-degrees {
+    font-size: 2.2rem;
+  }
+
+  .weather-sun-cloud-icon {
+    font-size: 2.2rem;
+  }
+
+  /* Power card */
+  .power-card {
+    padding: 14px;
+  }
+
+  .power-num {
+    font-size: 2.3rem;
+  }
+
+  .power-unit {
+    font-size: 1.1rem;
+  }
+
+  /* Status counters */
+  .status-counters-card {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .status-tile {
+    padding: 8px 6px;
+    min-height: 80px;
+    border-radius: 10px;
+  }
+
+  .tile-number {
+    font-size: 1.45rem;
+  }
+
+  .tile-label {
+    font-size: 0.62rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  .btn-section-add {
+    padding: 4px 10px;
+    font-size: 0.76rem;
+  }
+
+  /* Devices Grid: 2 cột tối ưu cho mobile */
+  .devices-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .hunonic-device-card {
+    padding: 12px 10px;
+    min-height: 126px;
+    border-radius: 14px;
+  }
+
+  .hex-ir-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+
+  .card-dev-name {
+    font-size: 0.84rem;
+    line-height: 1.25;
+  }
+
+  .card-room-tag {
+    font-size: 0.68rem;
+  }
+
+  .card-status-badge {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+  }
+
+  .card-extra-info {
+    font-size: 0.68rem;
+  }
+
+  /* Cả hai card đều giữ 1 cột để đối xứng 50/50 trên mobile */
+  .gateway-summary-card {
+    grid-column: span 1;
+  }
+
+  /* Right Drawer full màn hình mobile */
+  .device-detail-drawer {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .drawer-header {
+    padding: 12px 14px;
+  }
+
+  .drawer-header-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+  }
+
+  .drawer-header-titles h3 {
+    font-size: 0.95rem;
+  }
+
+  .drawer-header-titles span {
+    font-size: 0.72rem;
+  }
+
+  .drawer-body {
+    padding: 14px 12px 28px;
+  }
+
+  .drawer-ac-img-wrap {
+    height: 145px;
+  }
+
+  .drawer-ac-screen-temp {
+    font-size: 1.6rem;
+  }
+
+  .drawer-temp-dial-row {
+    gap: 14px;
+  }
+
+  .btn-drawer-temp-circle {
+    width: 44px;
+    height: 44px;
+    font-size: 1.15rem;
+  }
+
+  .drawer-temp-readout .temp-val {
+    font-size: 2.6rem;
+  }
+
+  .drawer-pills-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .drawer-pills-grid.fan-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .drawer-pill-opt {
+    padding: 8px 4px;
+    font-size: 0.72rem;
+  }
+
+  .btn-drawer-ac-power {
+    padding: 12px 16px;
+    font-size: 0.88rem;
+  }
+
+  .drawer-tele-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Modals trên màn hình nhỏ */
+  .hvac-modal-card,
+  .gateway-manage-card,
+  .add-gateway-card {
+    border-radius: 16px;
+    max-height: 95vh;
+  }
+
+  .modal-header {
+    padding: 12px 14px;
+  }
+
+  .modal-body {
+    padding: 14px 12px;
+    gap: 14px;
+  }
+
+  .gw-modal-tabs {
+    padding: 2px 10px 0;
+    gap: 4px;
+  }
+
+  .gw-tab-btn {
+    padding: 8px 8px;
+    font-size: 0.75rem;
+  }
+
+  .gw-telemetry-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .telemetry-box {
+    padding: 8px 10px;
+  }
+
+  .discovered-devices-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .device-type-selector {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .type-card {
+    padding: 10px 8px;
+    font-size: 0.78rem;
+  }
+
+  /* Small Mobile Scene Chips */
+  .scene-chip {
+    max-width: 250px;
+    padding: 8px 12px;
+  }
+
+  .scene-chip-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+    font-size: 0.8rem;
+  }
+
+  .scene-chip-sub {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+    font-size: 0.66rem;
+  }
+
+  /* Small Mobile Room Management */
+  .subview-header-bar {
+    padding: 8px 10px;
+    margin-bottom: 12px;
+  }
+
+  .subview-header-left {
+    gap: 8px;
+  }
+
+  #rooms-header-icon-box {
+    display: none !important;
+  }
+
+  .subview-title-group div div:last-child {
+    display: none !important;
+  }
+
+  .btn-subview-action#btn-open-create-room {
+    padding: 6px 10px !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap;
+  }
+
+  .btn-subview-action#btn-open-create-room span {
+    font-size: 0.75rem;
+  }
+
+  .room-stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .room-stat-card:last-child {
+    grid-column: span 2;
+  }
+
+  .room-stat-card {
+    padding: 8px 10px;
+  }
+
+  .room-stat-card .stat-val {
+    font-size: 0.95rem;
+  }
+
+  .room-stat-card .stat-lbl {
+    font-size: 0.62rem;
+  }
+
+  .rooms-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .room-card {
+    padding: 14px 12px;
+  }
+
+  .room-env-strip {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 6px 8px;
+  }
+
+  .room-env-item {
+    font-size: 0.72rem;
+  }
+}
+
+
+
+

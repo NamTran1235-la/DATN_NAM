@@ -248,6 +248,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
+
   // ── MIGRATION: Đảm bảo trạm IR trung tâm là thiết bị cha chứa danh sách điều hòa (MIRAGE, FUNIKI)
   let foundHub = getActiveIrHub();
 
@@ -268,6 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
     customDevices = customDevices.filter(d => d.type !== "ac");
     customDevices.unshift(foundHub);
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
   } else if (foundHub) {
     // Đảm bảo tên hiển thị chuẩn theo giao diện Hunonic: IR trung tâm
     if (!foundHub.name || foundHub.name === "IR Hunonic Smart Pro") {
@@ -278,25 +295,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     customDevices = customDevices.filter(d => d.type !== "ac");
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
   } else {
     // Lưu giữ nguyên vẹn mọi thiết bị người dùng đã thêm (Node Cảm Biến C3, v.v.)
     customDevices = customDevices.filter(d => d.type !== "ac");
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
   }
 
   customDevices.forEach(dev => {
     if (dev.type === "ir_hub") dev.children = [];
   });
 
-  // ── Cập nhật ngày tháng tiếng Việt ──────────────────────────────────────────
-  function updateLiveDate() {
-    if (!liveWeatherDate) return;
-    const now = new Date();
-    const days = ["Chủ Nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
-    const dayName = days[now.getDay()];
-    const dateStr = `${dayName}, ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-    liveWeatherDate.innerText = dateStr;
-  }
   updateLiveDate();
 
   // ── Home Dropdown Selector ──────────────────────────────────────────────────
@@ -583,13 +593,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       showToast("Chuyển sang màn hình chọn Wi-Fi & nạp cấu hình!");
       showStage("wifi-picker");
-    });
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>"']/g, function(m) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
     });
   }
 
@@ -916,33 +919,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ── Hàm gọi REST API có kèm JWT Token ──────────────────────────────────────
-  async function callApi(endpoint, method = "GET", body = null) {
-    try {
-      const opts = {
-        method,
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }
-      };
-      if (body) opts.body = JSON.stringify(body);
-
-      const res = await fetch(endpoint, opts);
-      if (res.status === 401) {
-        localStorage.removeItem("gate_token");
-        window.location.href = "login.html";
-        return null;
-      }
-      return await res.json();
-    } catch (err) {
-      console.error(`Lỗi gọi API ${endpoint}:`, err);
-      return null;
-    }
-  }
-  window.callApi = callApi;
-
   // ── ĐỊNH NGHĨA STORAGE KEYS & DỮ LIỆU CẤU HÌNH MẶC ĐỊNH ─────────────────
   const ROOMS_STORAGE_KEY = "gate_user_rooms";
   const DEFAULT_ROOMS = [
@@ -1137,6 +1113,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (curDevsStr !== srvDevsStr) {
             customDevices = cleanServerDevs;
             localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
             hasChanges = true;
           }
 
@@ -1228,14 +1205,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   let deviceSyncPollCounter = 0;
-
-  // ── Định dạng Uptime ───────────────────────────────────────────────────────
-  function formatUptime(seconds) {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
 
   // ── RENDER THIẾT BỊ HOẶC TRẠNG THÁI RỖNG (LOGIC CHÍNH) ──────────────────────
   // ── PHẦN TỬ RIGHT NAVIGATION DRAWER (NAV BÊN TAY PHẢI) ──────────────────────
@@ -1678,6 +1647,7 @@ document.addEventListener("DOMContentLoaded", () => {
             hubDev.children = res.data.children;
             currentActiveIrChild = null; // Reset thiết bị con đang chọn nếu bị xóa
             localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
             renderIrChildList(hubDev);
             renderDevices();
             if (res.data.children.length === 0) {
@@ -1789,6 +1759,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Lưu vào localStorage
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
 
     // 2. CẬP NHẬT GIAO DIỆN TỨC THÌ (0ms - phản hồi 60 FPS mượt mà cho người dùng)
     if (targetDev) updateDrawerAcUI(targetDev);
@@ -2083,107 +2054,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ── ÂM THANH CẢNH BÁO HIỆN DIỆN (WEB AUDIO API CHIME - KHÔNG CẦN FILE MP3) ──
-  let presenceAudioCtx = null;
-
-  function isPresenceSoundEnabled() {
-    return localStorage.getItem("gate_presence_sound") !== "false";
-  }
-
-  function ensurePresenceAudioCtx() {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return null;
-    if (!presenceAudioCtx) {
-      presenceAudioCtx = new AudioCtx();
-    }
-    if (presenceAudioCtx.state === "suspended") {
-      presenceAudioCtx.resume().catch(() => {});
-    }
-    return presenceAudioCtx;
-  }
-
-  // Tự động mở khóa AudioContext ngay khi người dùng tương tác lần đầu (quy định Autoplay của trình duyệt)
-  ["click", "touchstart", "keydown"].forEach(evtName => {
-    document.addEventListener(evtName, () => {
-      if (isPresenceSoundEnabled()) ensurePresenceAudioCtx();
-    }, { once: true, passive: true });
-  });
-
-  function playPresenceAlertSound(force = false) {
-    if (!force && !isPresenceSoundEnabled()) return;
-    try {
-      const ctx = ensurePresenceAudioCtx();
-      if (!ctx) return;
-
-      const playNotes = () => {
-        const now = ctx.currentTime;
-        // Chuỗi 3 nốt chuông thông minh trong trẻo: C6 -> E6 -> G6
-        const notes = [
-          { freq: 1046.50, start: 0.00, dur: 0.18, vol: 0.24 },
-          { freq: 1318.51, start: 0.13, dur: 0.18, vol: 0.24 },
-          { freq: 1567.98, start: 0.26, dur: 0.38, vol: 0.28 }
-        ];
-
-        notes.forEach(n => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(n.freq, now + n.start);
-
-          gain.gain.setValueAtTime(0.0001, now + n.start);
-          gain.gain.linearRampToValueAtTime(n.vol, now + n.start + 0.015);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + n.start + n.dur);
-
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(now + n.start);
-          osc.stop(now + n.start + n.dur + 0.02);
-        });
-      };
-
-      if (ctx.state === "suspended") {
-        ctx.resume().then(playNotes).catch(() => {});
-      } else {
-        playNotes();
-      }
-    } catch (err) {
-      console.warn("Không thể phát âm thanh thông báo:", err);
-    }
-  }
-  window.playPresenceAlertSound = playPresenceAlertSound;
-
-  function updatePresenceSoundButtonUI() {
-    const btn = document.getElementById("btn-toggle-presence-sound");
-    const icon = document.getElementById("presence-sound-icon");
-    if (!btn || !icon) return;
-    const enabled = isPresenceSoundEnabled();
-    if (enabled) {
-      icon.className = "fa-solid fa-volume-high";
-      icon.style.color = "#00b06f";
-      btn.title = "Âm thanh báo có người: Đang BẬT (Bấm để tắt)";
-    } else {
-      icon.className = "fa-solid fa-volume-xmark";
-      icon.style.color = "#94a3b8";
-      btn.title = "Âm thanh báo có người: Đang TẮT (Bấm để bật)";
-    }
-  }
-
-  const btnTogglePresenceSound = document.getElementById("btn-toggle-presence-sound");
-  if (btnTogglePresenceSound) {
-    updatePresenceSoundButtonUI();
-    btnTogglePresenceSound.addEventListener("click", () => {
-      const next = !isPresenceSoundEnabled();
-      localStorage.setItem("gate_presence_sound", next ? "true" : "false");
-      updatePresenceSoundButtonUI();
-      if (next) {
-        playPresenceAlertSound(true);
-        showToast("Đã BẬT âm thanh báo khi có người!", "success", 2500);
-      } else {
-        showToast("Đã TẮT âm thanh báo khi có người.", "info", 2500);
-      }
-    });
-  }
-
   // ── MỞ DRAWER BÊN TAY PHẢI CHO THIẾT BỊ CON ──────────────────────────────────
   let previousPresence = null;
 
@@ -2308,389 +2178,6 @@ document.addEventListener("DOMContentLoaded", () => {
       </section>`;
   }
 
-  // ── CẤU HÌNH ĐƠN GIÁ ĐIỆN & TÍNH TIỀN ĐIỆN PZEM ─────────────────────────────
-  function getElectricityRate() {
-    const pz = getActivePzem();
-    if (pz && pz.electricity_rate) {
-      return Math.max(100, parseInt(pz.electricity_rate, 10) || 2500);
-    }
-    const stored = parseInt(localStorage.getItem("gate_electricity_rate"), 10);
-    return (stored && stored >= 100) ? stored : 2500;
-  }
-  window.getElectricityRate = getElectricityRate;
-
-  function updatePzemCostPreview(rateVal) {
-    const previewEl = document.getElementById("drawer-pzem-cost-preview");
-    if (!previewEl) return;
-    const rate = Math.max(0, parseInt(rateVal, 10) || 0);
-    const energy = (pzemData && pzemData.energy > 0) ? pzemData.energy : 0;
-    const cost = Math.round(energy * rate);
-    previewEl.innerText = `Tạm tính: ${cost.toLocaleString("vi-VN")} đ`;
-  }
-
-  function highlightActiveRatePreset(rateVal) {
-    const val = parseInt(rateVal, 10);
-    document.querySelectorAll(".btn-rate-preset").forEach(btn => {
-      const btnRate = parseInt(btn.getAttribute("data-rate"), 10);
-      if (btnRate === val) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
-      }
-    });
-  }
-
-  function refreshPzemPanel() {
-    let panel = document.getElementById("drawer-pzem-panel");
-    const dev = customDevices.find(d => d.id === currentDrawerTarget);
-    const visible = dev && isPzemDevice(dev) && !currentActiveIrChild;
-    if (!panel && visible && drawerHeroBox) {
-      panel = document.createElement("div");
-      panel.id = "drawer-pzem-panel";
-      drawerHeroBox.parentNode.insertBefore(panel, drawerHeroBox);
-    }
-    if (!panel) return;
-    panel.style.display = visible ? "block" : "none";
-    if (!visible) return;
-
-    const online = isDeviceOnline(dev);
-    const color = online ? "#059669" : "#ef4444";
-    const statusLabel = online ? "Đang Đo Lường Realtime" : "Mất Kết Nối STM32";
-
-    const vStr = online ? `${pzemData.voltage.toFixed(1)} V` : "-- V";
-    const aStr = online ? `${pzemData.current.toFixed(2)} A` : "-- A";
-    const wStr = online ? `${pzemData.power.toFixed(1)} W` : "-- W";
-    const kwhStr = online ? `${pzemData.energy.toFixed(3)} kWh` : "-- kWh";
-    const hzStr = online ? `${pzemData.frequency.toFixed(1)} Hz` : "-- Hz";
-    const pfStr = online ? `${pzemData.pf.toFixed(2)}` : "--";
-
-    const currentRate = getElectricityRate();
-    const liveCost = Math.round((pzemData.energy || 0) * currentRate);
-    const costStr = online ? `${liveCost.toLocaleString("vi-VN")} đ` : "-- đ";
-
-    panel.innerHTML = `
-      <section style="padding:20px 16px;margin-bottom:18px;border:1px solid #fed7aa;border-radius:22px;background:linear-gradient(165deg,#fffbeb 0%,#ffffff 100%);text-align:center;box-shadow:0 4px 16px rgba(245,158,11,0.08);">
-        <div style="width:64px;height:64px;margin:0 auto 12px;border-radius:50%;background:${online ? '#fef3c7' : '#f1f5f9'};display:grid;place-items:center;color:${online ? '#d97706' : '#94a3b8'};font-size:26px;box-shadow:${online ? '0 6px 18px rgba(217,119,6,0.2)' : 'none'};">
-          <i class="fa-solid fa-bolt ${online ? 'fa-beat-fade' : ''}" style="--fa-beat-fade-scale:1.08;--fa-beat-fade-opacity:0.85;"></i>
-        </div>
-        <div style="font-size:11px;letter-spacing:1.4px;color:#94a3b8;font-weight:700;margin-bottom:4px;">BỘ ĐO ĐIỆN NĂNG PZEM-004T</div>
-        <strong style="font-size:19px;color:${color};display:block;margin-bottom:4px;">${statusLabel}</strong>
-        <p style="margin:0 0 16px;color:#64748b;font-size:12px;">${online ? 'Dữ liệu truyền từ STM32F103 qua cổng UART mỗi giây' : 'Chưa nhận được bản tin UART từ vi điều khiển STM32'}</p>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <!-- 1. Điện áp -->
-          <div style="background:#ffffff;border:1px solid #fed7aa;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
-            <div style="font-size:10.5px;color:#9a3412;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
-              <i class="fa-solid fa-bolt" style="color:#f59e0b;"></i> ĐIỆN ÁP (U)
-            </div>
-            <div style="font-size:16px;font-weight:800;color:#1e293b;">${vStr}</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Dải đo: 80 - 260 V</div>
-          </div>
-
-          <!-- 2. Dòng điện -->
-          <div style="background:#ffffff;border:1px solid #bae6fd;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
-            <div style="font-size:10.5px;color:#0369a1;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
-              <i class="fa-solid fa-gauge-high" style="color:#0284c7;"></i> DÒNG ĐIỆN (I)
-            </div>
-            <div style="font-size:16px;font-weight:800;color:#1e293b;">${aStr}</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Dải đo: 0 - 100 A</div>
-          </div>
-
-          <!-- 3. Công suất tác dụng -->
-          <div style="background:#ffffff;border:1px solid #bbf7d0;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
-            <div style="font-size:10.5px;color:#15803d;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
-              <i class="fa-solid fa-lightbulb" style="color:#10b981;"></i> CÔNG SUẤT (P)
-            </div>
-            <div style="font-size:16px;font-weight:800;color:#15803d;">${wStr}</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Công suất tiêu thụ</div>
-          </div>
-
-          <!-- 4. Năng lượng tiêu thụ -->
-          <div style="background:#ffffff;border:1px solid #e9d5ff;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
-            <div style="font-size:10.5px;color:#7e22ce;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
-              <i class="fa-solid fa-chart-column" style="color:#8b5cf6;"></i> TIÊU THỤ (E)
-            </div>
-            <div style="font-size:16px;font-weight:800;color:#7e22ce;">${kwhStr}</div>
-            <div style="font-size:11px;color:#059669;font-weight:700;margin-top:2px;">💰 Tạm tính: ${costStr}</div>
-          </div>
-
-          <!-- 5. Tần số lưới -->
-          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
-            <div style="font-size:10.5px;color:#475569;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
-              <i class="fa-solid fa-wave-square" style="color:#06b6d4;"></i> TẦN SỐ (F)
-            </div>
-            <div style="font-size:15px;font-weight:700;color:#334155;">${hzStr}</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Lưới AC chuẩn</div>
-          </div>
-
-          <!-- 6. Hệ số công suất -->
-          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
-            <div style="font-size:10.5px;color:#475569;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
-              <i class="fa-solid fa-sliders" style="color:#ec4899;"></i> HỆ SỐ (PF)
-            </div>
-            <div style="font-size:15px;font-weight:700;color:#334155;">${pfStr}</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Cosφ công suất</div>
-          </div>
-        </div>
-
-        <div style="margin-top:14px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:11px;color:#64748b;display:flex;align-items:center;justify-content:center;gap:6px;">
-          <i class="fa-solid fa-microchip" style="color:#0284c7;"></i>
-          <span>STM32F103 (USART1) ➔ ESP32-S3 (UART1) &bull; 115200 baud</span>
-        </div>
-      </section>
-    `;
-
-    // Cập nhật giá trị preview tiền điện trong phần chỉnh sửa nếu đang mở
-    const rateInput = document.getElementById("drawer-edit-pzem-rate");
-    if (rateInput) {
-      updatePzemCostPreview(rateInput.value || currentRate);
-    }
-  }
-
-  // ── CẬP NHẬT THẺ WIDGET TỔNG QUAN ĐIỆN NĂNG (POWER CARD BANNER) ───────────────
-  function updatePowerSummaryWidget() {
-    const cardEl = document.getElementById("card-power-widget");
-    const headerEl = document.getElementById("power-widget-header");
-    const valEl = document.getElementById("power-widget-num");
-    const costValEl = document.getElementById("power-widget-cost-val");
-    const subEl = document.getElementById("power-widget-sub");
-    const badgeEl = document.getElementById("power-widget-badge");
-
-    if (!cardEl && !valEl) return;
-
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
-    const monthStr = `Điện tiêu thụ tháng ${currentMonth}/${currentYear}`;
-
-    const pzemDev = getActivePzem();
-    const isPzemDeleted = localStorage.getItem("gate_pzem_deleted") === "true";
-
-    const currentRate = getElectricityRate();
-    const currentEnergy = (pzemData && pzemData.energy > 0) ? pzemData.energy : 0;
-    const totalCost = Math.round(currentEnergy * currentRate);
-    const costFormatted = totalCost.toLocaleString("vi-VN") + " đ";
-    const rateFormatted = currentRate.toLocaleString("vi-VN") + " đ/kWh";
-
-    if (costValEl) {
-      costValEl.innerText = (!pzemDev || isPzemDeleted) ? "0 đ" : costFormatted;
-    }
-
-    if (!pzemDev || isPzemDeleted) {
-      if (headerEl) headerEl.innerHTML = `${monthStr} &bull; Chưa có thiết bị đo điện`;
-      if (valEl) valEl.innerText = "0.00";
-      if (subEl) subEl.innerText = "Tháng trước: 0.00 kWh";
-      if (badgeEl) {
-        badgeEl.innerHTML = `<i class="fa-solid fa-circle-minus"></i> Chưa kết nối`;
-        badgeEl.style.background = "rgba(255, 255, 255, 0.2)";
-      }
-      return;
-    }
-
-    const devName = escapeHtml(pzemDev.name || "Đo Điện Năng");
-    const isOnline = isDeviceOnline(pzemDev);
-
-    if (isOnline) {
-      if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName}`;
-      if (valEl) valEl.innerText = pzemData.energy > 0 ? pzemData.energy.toFixed(2) : "0.00";
-      if (subEl) subEl.innerHTML = `⚡ ${pzemData.voltage.toFixed(1)}V &bull; ${pzemData.current.toFixed(2)}A &bull; ${rateFormatted}`;
-      if (badgeEl) {
-        badgeEl.innerHTML = `<i class="fa-solid fa-bolt"></i> ${pzemData.power.toFixed(1)} W`;
-        badgeEl.style.background = "rgba(255, 255, 255, 0.25)";
-      }
-    } else {
-      if (headerEl) headerEl.innerHTML = `${monthStr} &bull; ${devName} (Ngoại tuyến)`;
-      if (valEl) valEl.innerText = pzemData.energy > 0 ? pzemData.energy.toFixed(2) : "0.00";
-      const timeStr = (typeof formatTimeAgo === "function" && pzemData.lastSeen) ? formatTimeAgo(pzemData.lastSeen) : null;
-      if (subEl) subEl.innerHTML = timeStr ? `Lần cuối: ${timeStr} &bull; ${rateFormatted}` : `Mất kết nối thiết bị đo &bull; ${rateFormatted}`;
-      if (badgeEl) {
-        badgeEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Ngoại tuyến`;
-        badgeEl.style.background = "rgba(239, 68, 68, 0.35)";
-      }
-    }
-  }
-  window.updatePowerSummaryWidget = updatePowerSummaryWidget;
-
-  // ── THỐNG KÊ ĐIỆN NĂNG PZEM-004T (BIỂU ĐỒ CHART.JS & KPI THEO NGÀY/TUẦN/THÁNG) ──
-  let pzemStatsChart = null;
-  let pzemStatsPeriod = "day";
-  let pzemStatsMetric = "kwh";
-  let pzemStatsCache = null;
-
-  async function loadPzemStats(period = pzemStatsPeriod) {
-    pzemStatsPeriod = period;
-    const refreshBtn = document.getElementById("btn-pzem-stats-refresh");
-    if (refreshBtn) refreshBtn.querySelector("i")?.classList.add("fa-spin");
-
-    try {
-      const res = await callApi(`/api/sensors/pzem/stats?period=${encodeURIComponent(period)}`);
-      if (res && res.success && res.data) {
-        pzemStatsCache = res.data;
-        renderPzemStatsUI(pzemStatsCache);
-      }
-    } catch (err) {
-      console.warn("Không thể tải thống kê PZEM:", err);
-    } finally {
-      if (refreshBtn) {
-        setTimeout(() => refreshBtn.querySelector("i")?.classList.remove("fa-spin"), 300);
-      }
-    }
-  }
-  window.loadPzemStats = loadPzemStats;
-
-  function renderPzemStatsUI(data) {
-    if (!data) return;
-    const summary = data.summary || {};
-    const rate = getElectricityRate();
-
-    const totalKwh = Number(summary.total_kwh || 0);
-    const totalCost = Math.round(totalKwh * rate);
-    const maxPower = Number(summary.max_power || 0);
-    const avgPower = Number(summary.avg_power || 0);
-    const samples = Number(summary.sample_count || 0);
-
-    const kwhEl = document.getElementById("pzem-stat-kwh");
-    const costEl = document.getElementById("pzem-stat-cost");
-    const maxPEl = document.getElementById("pzem-stat-max-p");
-    const avgPEl = document.getElementById("pzem-stat-avg-p");
-    const sampleEl = document.getElementById("pzem-stat-samples");
-
-    if (kwhEl) kwhEl.innerText = `${totalKwh.toFixed(3)} kWh`;
-    if (costEl) costEl.innerText = `${totalCost.toLocaleString("vi-VN")} đ`;
-    if (maxPEl) maxPEl.innerText = `${maxPower.toFixed(1)} W`;
-    if (avgPEl) avgPEl.innerText = `${avgPower.toFixed(1)} W`;
-    if (sampleEl) sampleEl.innerText = `${samples} mẫu`;
-
-    // Render bảng lịch sử đo gần nhất
-    const tbody = document.getElementById("pzem-recent-logs-body");
-    if (tbody) {
-      const logs = Array.isArray(data.recent_logs) ? data.recent_logs : [];
-      if (logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:12px;">Chưa có dữ liệu lịch sử lưu trong CSDL</td></tr>`;
-      } else {
-        tbody.innerHTML = logs.map(item => `
-          <tr>
-            <td>${escapeHtml(item.time || "--")}</td>
-            <td>${Number(item.voltage || 0).toFixed(1)}</td>
-            <td style="font-weight:700;color:#059669;">${Number(item.power || 0).toFixed(1)}</td>
-            <td style="font-weight:700;color:#7e22ce;">${Number(item.energy || 0).toFixed(3)}</td>
-          </tr>
-        `).join("");
-      }
-    }
-
-    // Vẽ biểu đồ Chart.js
-    const canvas = document.getElementById("pzem-stats-chart");
-    if (!canvas || typeof Chart === "undefined") return;
-
-    const labels = data.labels || [];
-    const kwhSeries = data.kwh_series || [];
-    const powerAvgSeries = data.power_avg_series || [];
-    const powerMaxSeries = data.power_max_series || [];
-
-    const isKwhMode = (pzemStatsMetric === "kwh");
-    const datasets = isKwhMode
-      ? [
-          {
-            label: "Điện năng (kWh)",
-            data: kwhSeries,
-            backgroundColor: "rgba(0, 176, 111, 0.78)",
-            hoverBackgroundColor: "#00b06f",
-            borderColor: "#059669",
-            borderWidth: 1,
-            borderRadius: 5,
-            maxBarThickness: 18
-          }
-        ]
-      : [
-          {
-            label: "Công suất TB (W)",
-            data: powerAvgSeries,
-            borderColor: "#f59e0b",
-            backgroundColor: "rgba(245, 158, 11, 0.16)",
-            borderWidth: 2,
-            fill: true,
-            tension: 0.35,
-            pointRadius: 2.5,
-            pointHoverRadius: 5
-          },
-          {
-            label: "Công suất đỉnh (W)",
-            data: powerMaxSeries,
-            borderColor: "#ef4444",
-            backgroundColor: "transparent",
-            borderWidth: 1.5,
-            borderDash: [4, 3],
-            fill: false,
-            tension: 0.35,
-            pointRadius: 0,
-            pointHoverRadius: 4
-          }
-        ];
-
-    if (pzemStatsChart) {
-      pzemStatsChart.destroy();
-      pzemStatsChart = null;
-    }
-
-    pzemStatsChart = new Chart(canvas.getContext("2d"), {
-      type: isKwhMode ? "bar" : "line",
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: {
-            display: !isKwhMode,
-            position: "top",
-            labels: { boxWidth: 10, font: { size: 10, weight: "600" }, color: "#475569", padding: 6 }
-          },
-          tooltip: {
-            backgroundColor: "rgba(15, 23, 42, 0.92)",
-            padding: 9,
-            titleFont: { size: 11, weight: "700" },
-            bodyFont: { size: 11 },
-            callbacks: {
-              label: function(ctx) {
-                const val = Number(ctx.parsed.y || 0);
-                if (isKwhMode) {
-                  const costVnd = Math.round(val * getElectricityRate());
-                  return [
-                    `Điện năng: ${val.toFixed(3)} kWh`,
-                    `Tiền điện: ${costVnd.toLocaleString("vi-VN")} đ`
-                  ];
-                }
-                return `${ctx.dataset.label}: ${val.toFixed(1)} W`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: {
-              color: "#64748b",
-              font: { size: 10 },
-              maxRotation: 0,
-              autoSkip: true,
-              maxTicksLimit: pzemStatsPeriod === "day" ? 8 : 7
-            }
-          },
-          y: {
-            beginAtZero: true,
-            grid: { color: "rgba(226, 232, 240, 0.7)" },
-            ticks: {
-              color: "#64748b",
-              font: { size: 10 },
-              maxTicksLimit: 5
-            }
-          }
-        }
-      }
-    });
-  }
-
   function openChildDeviceDrawer(devId) {
     let dev = customDevices.find(d => d.id === devId);
     if (!dev && (devId === "dev_espnow_node_1" || (typeof devId === "string" && (devId.includes("espnow") || devId.includes("sensor"))))) {
@@ -2711,6 +2198,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!customDevices.some(d => d.id === dev.id)) {
         customDevices.push(dev);
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
       }
     }
     // Đảm bảo node cảm biến luôn mở được dù chưa có trong danh sách
@@ -2725,6 +2213,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       customDevices.push(dev);
       localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
     }
     // Đảm bảo bộ đo điện PZEM luôn mở được dù chưa có trong danh sách
     if (!dev && (devId === "dev_pzem_meter_1" || (typeof devId === "string" && devId.includes("pzem")))) {
@@ -2738,6 +2227,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       customDevices.push(dev);
       localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
     }
     if (!dev) return;
     currentDrawerTarget = dev.id;
@@ -2808,6 +2298,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (res && res.success && res.data && Array.isArray(res.data.children)) {
           dev.children = res.data.children;
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
           if (currentDrawerTarget === devId && !currentActiveIrChild) {
             renderIrChildList(dev);
             if (drawerHeroSub) {
@@ -2864,7 +2355,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (pzemStatsSec) {
       if (isPzem) {
         pzemStatsSec.style.display = "block";
-        loadPzemStats(pzemStatsPeriod);
+        if (typeof window.loadPzemStats === "function") window.loadPzemStats();
       } else {
         pzemStatsSec.style.display = "none";
       }
@@ -3135,6 +2626,7 @@ document.addEventListener("DOMContentLoaded", () => {
           foundHub = newDev;
           customDevices.unshift(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
           saveUserDevicesToServer(true);
           renderDrawerChildList();
           renderDrawerAvailableDevices();
@@ -3152,6 +2644,7 @@ document.addEventListener("DOMContentLoaded", () => {
           };
           customDevices.push(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
           saveUserDevicesToServer(true);
           renderDrawerChildList();
           renderDrawerAvailableDevices();
@@ -3169,6 +2662,7 @@ document.addEventListener("DOMContentLoaded", () => {
           };
           customDevices.push(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
           saveUserDevicesToServer(true);
           renderDrawerChildList();
           renderDrawerAvailableDevices();
@@ -3260,12 +2754,13 @@ document.addEventListener("DOMContentLoaded", () => {
             rateNotice = ` (Đơn giá: ${newRate.toLocaleString('vi-VN')} đ/kWh)`;
           }
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
           saveUserDevicesToServer(true);
           renderDevices();
           updatePowerSummaryWidget();
           refreshPzemPanel();
-          if (isPzemDevice(dev) && pzemStatsCache) {
-            renderPzemStatsUI(pzemStatsCache);
+          if (isPzemDevice(dev) && typeof window.renderPzemStatsUI === "function") {
+            window.renderPzemStatsUI();
           }
           openChildDeviceDrawer(currentDrawerTarget);
           showToast(`Đã lưu thay đổi cho [${newName}]!${rateNotice}`, "success");
@@ -3312,6 +2807,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
     foundHub = getActiveIrHub();
     renderDrawerAvailableDevices();
     saveUserDevicesToServer(true);
@@ -3382,83 +2878,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     });
-  }
-
-  // ── CÁC HÀM TẠO ICON SVG CHUẨN HUNONIC (PIXEL-PERFECT) ─────────────────────────
-  function getIrHubHexSvg() {
-    return `
-      <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 2.5L35.5 11.45V29.35L20 38.3L4.5 29.35V11.45L20 2.5Z" fill="#383e48"/>
-        <circle cx="20" cy="20.4" r="5" fill="#ef4444" opacity="0.95"/>
-        <circle cx="20" cy="20.4" r="2.2" fill="#7f1d1d"/>
-      </svg>
-    `;
-  }
-
-  function getGatewayHexSvg() {
-    return `
-      <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 2.5L35.5 11.45V29.35L20 38.3L4.5 29.35V11.45L20 2.5Z" fill="#00b06f"/>
-        <rect x="14" y="14.4" width="12" height="12" rx="2.5" fill="#ffffff"/>
-        <rect x="17" y="17.4" width="6" height="6" rx="1.2" fill="#00b06f"/>
-        <line x1="20" y1="10" x2="20" y2="14.4" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
-        <line x1="20" y1="26.4" x2="20" y2="30.8" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
-        <line x1="9.6" y1="20.4" x2="14" y2="20.4" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
-        <line x1="26" y1="20.4" x2="30.4" y2="20.4" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
-    `;
-  }
-
-  function getAcUnitSvg(isOnline, isChildOn) {
-    const ledColor = (!isOnline) ? "#94a3b8" : (isChildOn ? "#00b06f" : "#94a3b8");
-    return `
-      <svg width="46" height="26" viewBox="0 0 46 26" fill="none" xmlns="http://www.w3.org/2000/svg" class="ac-indoor-svg">
-        <rect x="1" y="2" width="44" height="22" rx="4" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.4"/>
-        <line x1="5" y1="6" x2="41" y2="6" stroke="#E2E8F0" stroke-width="1"/>
-        <rect x="5" y="17" width="36" height="3.5" rx="1.5" fill="#E2E8F0"/>
-        <circle cx="39" cy="11.5" r="1.8" fill="${ledColor}"/>
-      </svg>
-    `;
-  }
-
-  function getSensorHexSvg() {
-    return `
-      <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 2.5L35.5 11.45V29.35L20 38.3L4.5 29.35V11.45L20 2.5Z" fill="#8b5cf6"/>
-        <circle cx="20" cy="20.4" r="4.5" fill="#ffffff"/>
-        <path d="M16 16.4C18 14.4 22 14.4 24 16.4M13 13.4C17 9.4 23 9.4 27 13.4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    `;
-  }
-
-  function getRelayHexSvg(isOn) {
-    const color = isOn ? "#eab308" : "#64748b";
-    return `
-      <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 2.5L35.5 11.45V29.35L20 38.3L4.5 29.35V11.45L20 2.5Z" fill="${color}"/>
-        <path d="M20 12.4V24.4M15 18.4L20 12.4L25 18.4" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    `;
-  }
-
-  function getWifiHunonicSvg(isOnline) {
-    const color = isOnline ? "#00b06f" : "#94a3b8";
-    return `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" class="wifi-icon-hunonic ${isOnline ? '' : 'offline'}">
-        <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
-        <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
-        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
-        <line x1="12" y1="20" x2="12.01" y2="20" stroke-width="3"></line>
-        ${!isOnline ? `<line x1="2" y1="2" x2="22" y2="22" stroke="#ef4444" stroke-width="2.5"></line>` : ''}
-      </svg>
-    `;
-  }
-
-  function isSensorDevice(dev) {
-    if (!dev) return false;
-    return dev.type === "sensor" || dev.type === "espnow" || dev.id === "dev_espnow_node_1" || 
-      (typeof dev.id === "string" && (dev.id.includes("sensor") || dev.id.includes("espnow"))) ||
-      (typeof dev.name === "string" && dev.name.toLowerCase().includes("cảm biến"));
   }
 
   function getSensorBatteryInfo(dev) {
@@ -3571,15 +2990,6 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  function getPzemHexSvg() {
-    return `
-      <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 2.5L35.5 11.45V29.35L20 38.3L4.5 29.35V11.45L20 2.5Z" fill="#f59e0b"/>
-        <path d="M21.5 10L13.5 22H19.5L18.5 30L26.5 18H20.5L21.5 10Z" fill="#ffffff" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
-      </svg>
-    `;
-  }
-
   function getPzemTopRightHtml(dev, isOnline) {
     if (!isPzemDevice(dev)) return "";
     if (!isOnline) {
@@ -3679,6 +3089,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (res && res.success && res.data && Array.isArray(res.data.children)) {
               hubDev.children = res.data.children;
               localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
               renderSubViewDevices("ir_hub", hubDev);
               showToast(`Đã đồng bộ ${res.data.children.length} thiết bị!`, "success");
             }
@@ -4184,57 +3595,6 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         showToast("Chưa có thiết bị Đo Điện Năng trên hệ thống.", "info");
       }
-    });
-  }
-
-  // Lắng nghe sự kiện thay đổi đơn giá điện trong Drawer Chỉnh Sửa
-  const pzemRateInput = document.getElementById("drawer-edit-pzem-rate");
-  if (pzemRateInput) {
-    pzemRateInput.addEventListener("input", function() {
-      updatePzemCostPreview(this.value);
-      highlightActiveRatePreset(this.value);
-    });
-  }
-
-  document.querySelectorAll(".btn-rate-preset").forEach(btn => {
-    btn.addEventListener("click", function() {
-      const r = this.getAttribute("data-rate");
-      if (pzemRateInput) {
-        pzemRateInput.value = r;
-        updatePzemCostPreview(r);
-        highlightActiveRatePreset(r);
-      }
-    });
-  });
-
-  // Lắng nghe sự kiện bộ lọc Thống kê Điện năng PZEM (Ngày / Tuần / Tháng & kWh / Watt)
-  document.querySelectorAll(".pzem-tab-btn").forEach(btn => {
-    btn.addEventListener("click", function() {
-      const period = this.getAttribute("data-period") || "day";
-      document.querySelectorAll(".pzem-tab-btn").forEach(b => b.classList.remove("active"));
-      this.classList.add("active");
-      loadPzemStats(period);
-    });
-  });
-
-  document.querySelectorAll(".pzem-metric-btn").forEach(btn => {
-    btn.addEventListener("click", function() {
-      const metric = this.getAttribute("data-metric") || "kwh";
-      pzemStatsMetric = metric;
-      document.querySelectorAll(".pzem-metric-btn").forEach(b => b.classList.remove("active"));
-      this.classList.add("active");
-      if (pzemStatsCache) {
-        renderPzemStatsUI(pzemStatsCache);
-      } else {
-        loadPzemStats(pzemStatsPeriod);
-      }
-    });
-  });
-
-  const btnPzemStatsRefresh = document.getElementById("btn-pzem-stats-refresh");
-  if (btnPzemStatsRefresh) {
-    btnPzemStatsRefresh.addEventListener("click", () => {
-      loadPzemStats(pzemStatsPeriod);
     });
   }
 
@@ -5223,6 +4583,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       customDevices.push(newDev);
       localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
       saveUserDevicesToServer(true);
 
       renderDevices();
@@ -5416,6 +4777,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         customDevices.push(newDev);
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
         saveUserDevicesToServer(true);
 
         renderDevices();
@@ -5724,6 +5086,7 @@ document.addEventListener("DOMContentLoaded", () => {
             liveHub.children = updatedChildren;
           }
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
 
           // Nếu đang xem sub-view của IR Hub -> render lại ngay
           const subViewEl = document.getElementById("view-device-hub");
@@ -6637,321 +6000,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==============================================================================
-  // TRUNG TÂM THÔNG BÁO & CẢNH BÁO (NOTIFICATION CENTER ENGINE)
-  // ==============================================================================
-  const viewNotifications = document.getElementById("view-notifications");
-  const navNotifsBtn = document.getElementById("nav-notifs");
-  const btnTopbarNotifs = document.getElementById("btn-topbar-notifs");
-  const btnNotifsBack = document.getElementById("btn-notifs-back");
-  const btnMarkAllRead = document.getElementById("btn-mark-all-read");
-  const btnClearAllNotifs = document.getElementById("btn-clear-all-notifs");
-  const notifFilterTabs = document.getElementById("notif-filter-tabs");
-  const notifCardsList = document.getElementById("notif-cards-list");
-  const sidebarNotifBadge = document.getElementById("sidebar-notif-badge");
-  const topbarNotifBadge = document.getElementById("topbar-notif-badge");
-
-  const NOTIF_STORAGE_KEY = "gate_system_notifications";
-  let currentNotifFilter = "all";
-
-  const DEFAULT_NOTIFICATIONS = [];
-
-  function getStoredNotifications() {
-    try {
-      if (localStorage.getItem("gate_notifs_v3") !== "true") {
-        localStorage.setItem("gate_notifs_v3", "true");
-        let stored = localStorage.getItem(NOTIF_STORAGE_KEY);
-        if (stored) {
-          let list = JSON.parse(stored);
-          if (Array.isArray(list)) {
-            list = list.filter(n => n.id && !n.id.startsWith("notif_default_"));
-            localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(list));
-            return list;
-          }
-        }
-        localStorage.setItem(NOTIF_STORAGE_KEY, "[]");
-        return [];
-      }
-      const stored = localStorage.getItem(NOTIF_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(n => n.id && !n.id.startsWith("notif_default_"));
-        }
-      }
-    } catch (e) {}
-    return [];
-  }
-
-  function saveStoredNotifications(list) {
-    localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(list));
-    updateNotificationBadges();
-  }
-
-  function addSystemNotification(notif) {
-    const list = getStoredNotifications();
-    const newEntry = {
-      id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
-      type: notif.type || "info",
-      title: notif.title || "Thông báo hệ thống",
-      message: notif.message || "",
-      time: notif.time || new Date().toISOString(),
-      read: false,
-      badge: notif.badge || "Thông báo"
-    };
-
-    list.unshift(newEntry);
-    if (list.length > 50) list.pop();
-    saveStoredNotifications(list);
-
-    if (viewNotifications && viewNotifications.style.display !== "none") {
-      renderNotificationsList();
-    }
-  }
-
-  function formatTimeAgo(isoString) {
-    try {
-      const diffMs = Date.now() - new Date(isoString).getTime();
-      const diffSec = Math.floor(diffMs / 1000);
-      if (diffSec < 60) return "Vừa xong";
-      const diffMin = Math.floor(diffSec / 60);
-      if (diffMin < 60) return `${diffMin} phút trước`;
-      const diffHour = Math.floor(diffMin / 60);
-      if (diffHour < 24) return `${diffHour} giờ trước`;
-      const d = new Date(isoString);
-      return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} ${d.getDate()}/${d.getMonth()+1}`;
-    } catch (e) {
-      return "Gần đây";
-    }
-  }
-
-  function updateNotificationBadges() {
-    const list = getStoredNotifications();
-    const unreadCount = list.filter(n => !n.read).length;
-
-    // Sidebar badge
-    if (sidebarNotifBadge) {
-      if (unreadCount > 0) {
-        sidebarNotifBadge.innerText = unreadCount > 9 ? "9+" : unreadCount;
-        sidebarNotifBadge.classList.remove("hidden");
-      } else {
-        sidebarNotifBadge.classList.add("hidden");
-      }
-    }
-
-    // Topbar badge
-    if (topbarNotifBadge) {
-      if (unreadCount > 0) {
-        topbarNotifBadge.innerText = unreadCount > 9 ? "9+" : unreadCount;
-        topbarNotifBadge.classList.remove("hidden");
-      } else {
-        topbarNotifBadge.classList.add("hidden");
-      }
-    }
-
-    // Summary text
-    const unreadNumEl = document.getElementById("notif-unread-num");
-    if (unreadNumEl) unreadNumEl.innerText = unreadCount;
-
-    // Tab counts
-    const countAllEl = document.getElementById("count-tab-all");
-    const countAlertEl = document.getElementById("count-tab-alert");
-    const countPresenceEl = document.getElementById("count-tab-presence");
-    const countAutoEl = document.getElementById("count-tab-auto");
-    const countDeviceEl = document.getElementById("count-tab-device");
-
-    if (countAllEl) countAllEl.innerText = list.length;
-    if (countAlertEl) countAlertEl.innerText = list.filter(n => n.type === "alert").length;
-    if (countPresenceEl) countPresenceEl.innerText = list.filter(n => n.type === "presence").length;
-    if (countAutoEl) countAutoEl.innerText = list.filter(n => n.type === "automation").length;
-    if (countDeviceEl) countDeviceEl.innerText = list.filter(n => n.type === "device").length;
-  }
-
-  function renderNotificationsList() {
-    if (!notifCardsList) return;
-    updateNotificationBadges();
-
-    const list = getStoredNotifications();
-    const filtered = list.filter(n => {
-      if (currentNotifFilter === "all") return true;
-      return n.type === currentNotifFilter;
-    });
-
-    if (filtered.length === 0) {
-      notifCardsList.innerHTML = `
-        <div class="notif-empty-state">
-          <div class="empty-icon"><i class="fa-regular fa-bell-slash"></i></div>
-          <h3>Không có thông báo nào</h3>
-          <p>Hiện không có cảnh báo hoặc nhật ký nào trong danh mục này. Hệ thống đang hoạt động an toàn và ổn định.</p>
-        </div>
-      `;
-      return;
-    }
-
-    let html = "";
-    filtered.forEach(item => {
-      let iconClass = "fa-info";
-      let tagClass = "tag-info";
-      if (item.type === "alert") {
-        iconClass = "fa-triangle-exclamation";
-        tagClass = "tag-alert";
-      } else if (item.type === "presence") {
-        iconClass = "fa-person-walking";
-        tagClass = "tag-presence";
-      } else if (item.type === "automation") {
-        iconClass = "fa-bolt";
-        tagClass = "tag-automation";
-      } else if (item.type === "device") {
-        iconClass = "fa-microchip";
-        tagClass = "tag-device";
-      }
-
-      html += `
-        <div class="notif-card notif-type-${item.type} ${item.read ? '' : 'unread'}" data-notif-id="${escapeHtml(item.id)}">
-          <div class="notif-icon">
-            <i class="fa-solid ${iconClass}"></i>
-          </div>
-          <div class="notif-content">
-            <div class="notif-top-row">
-              <h4 class="notif-title">${escapeHtml(item.title)}</h4>
-              <span class="notif-tag ${tagClass}">${escapeHtml(item.badge || 'Thông báo')}</span>
-              <span class="notif-time">
-                <i class="fa-regular fa-clock"></i> ${formatTimeAgo(item.time)}
-              </span>
-            </div>
-            <p class="notif-msg">${escapeHtml(item.message)}</p>
-          </div>
-          <div class="notif-actions">
-            <button type="button" class="btn-notif-item-action btn-toggle-notif-read" data-id="${escapeHtml(item.id)}" title="${item.read ? 'Đánh dấu chưa đọc' : 'Đánh dấu đã đọc'}">
-              <i class="fa-solid ${item.read ? 'fa-envelope' : 'fa-envelope-open'}"></i>
-            </button>
-            <button type="button" class="btn-notif-item-action btn-del-notif" data-id="${escapeHtml(item.id)}" title="Xóa thông báo này">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-        </div>
-      `;
-    });
-
-    notifCardsList.innerHTML = html;
-
-    // Gán sự kiện cho từng thẻ thông báo
-    notifCardsList.querySelectorAll(".btn-toggle-notif-read").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const id = btn.getAttribute("data-id");
-        const list = getStoredNotifications();
-        const target = list.find(n => n.id === id);
-        if (target) {
-          target.read = !target.read;
-          saveStoredNotifications(list);
-          renderNotificationsList();
-        }
-      });
-    });
-
-    notifCardsList.querySelectorAll(".btn-del-notif").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const id = btn.getAttribute("data-id");
-        let list = getStoredNotifications();
-        list = list.filter(n => n.id !== id);
-        saveStoredNotifications(list);
-        renderNotificationsList();
-      });
-    });
-
-    notifCardsList.querySelectorAll(".notif-card").forEach(card => {
-      card.addEventListener("click", () => {
-        const id = card.getAttribute("data-notif-id");
-        const list = getStoredNotifications();
-        const target = list.find(n => n.id === id);
-        if (target && !target.read) {
-          target.read = true;
-          saveStoredNotifications(list);
-          renderNotificationsList();
-        }
-      });
-    });
-  }
-
-  function openNotificationsView() {
-    currentHubView = null;
-    const homeDash = document.getElementById("view-home-dashboard");
-    const subView = document.getElementById("view-device-hub");
-    const autoView = document.getElementById("view-automations");
-    const otaView = document.getElementById("view-firmware-update");
-    const roomView = document.getElementById("view-room-mgmt");
-
-    if (homeDash) homeDash.style.display = "none";
-    if (subView) subView.style.display = "none";
-    if (autoView) autoView.style.display = "none";
-    if (otaView) otaView.style.display = "none";
-    if (roomView) roomView.style.display = "none";
-    if (viewNotifications) viewNotifications.style.display = "block";
-
-    updateSidebarActive("nav-notifs");
-    renderNotificationsList();
-    window.location.hash = "notifications";
-  }
-
-  if (navNotifsBtn) {
-    navNotifsBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      openNotificationsView();
-    });
-  }
-
-  if (btnTopbarNotifs) {
-    btnTopbarNotifs.addEventListener("click", (e) => {
-      e.preventDefault();
-      openNotificationsView();
-    });
-  }
-
-  if (btnNotifsBack) {
-    btnNotifsBack.addEventListener("click", () => {
-      closeHubSubView(true);
-      window.location.hash = "";
-    });
-  }
-
-  if (btnMarkAllRead) {
-    btnMarkAllRead.addEventListener("click", () => {
-      const list = getStoredNotifications();
-      list.forEach(n => n.read = true);
-      saveStoredNotifications(list);
-      renderNotificationsList();
-      showToast("Đã đánh dấu đã đọc tất cả thông báo!", "success");
-    });
-  }
-
-  if (btnClearAllNotifs) {
-    btnClearAllNotifs.addEventListener("click", async () => {
-      const ok = await showConfirmModal({
-        title: "Xóa lịch sử thông báo?",
-        message: "Bạn có chắc chắn muốn xóa toàn bộ lịch sử thông báo?",
-        confirmText: "Xóa tất cả",
-        type: "danger"
-      });
-      if (!ok) return;
-      saveStoredNotifications([]);
-      renderNotificationsList();
-      showToast("Đã xóa toàn bộ thông báo!", "info");
-    });
-  }
-
-  if (notifFilterTabs) {
-    notifFilterTabs.querySelectorAll(".notif-tab").forEach(tab => {
-      tab.addEventListener("click", () => {
-        notifFilterTabs.querySelectorAll(".notif-tab").forEach(t => t.classList.remove("active"));
-        tab.classList.add("active");
-        currentNotifFilter = tab.getAttribute("data-filter") || "all";
-        renderNotificationsList();
-      });
-    });
-  }
-
-  // ==============================================================================
   // QUẢN LÝ PHÒNG (ROOM MANAGEMENT ENGINE)
   // ==============================================================================
   const viewRoomMgmt = document.getElementById("view-room-mgmt");
@@ -7166,6 +6214,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (d.room === room.name) d.room = "Phòng khách";
           });
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
           if (localStorage.getItem("gate_room") === room.name) {
             localStorage.setItem("gate_room", "Phòng khách");
           }
@@ -7215,6 +6264,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
 
         renderDevices();
         renderRoomsView();
@@ -7389,6 +6439,7 @@ document.addEventListener("DOMContentLoaded", () => {
               if (d.room === oldName) d.room = name;
             });
             localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
             if (localStorage.getItem("gate_room") === oldName) {
               localStorage.setItem("gate_room", name);
             }
@@ -7423,6 +6474,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
+
       }
 
       saveStoredRooms(rooms);
@@ -8803,94 +7855,9 @@ document.addEventListener("DOMContentLoaded", () => {
   syncRoomDropdowns();
   updateNotificationBadges();
   updateAcModalUI();
+
+
   fetchStatus();
   setInterval(fetchStatus, 2500);
 
-  // ── Hộp thoại Xác nhận (Custom Confirm Modal thay thế window.confirm) ───────
-  function showConfirmModal({
-    title = "Xác nhận thao tác",
-    message = "Bạn có chắc chắn muốn thực hiện hành động này?",
-    confirmText = "Xác nhận",
-    cancelText = "Hủy bỏ",
-    type = "danger",
-    icon = null
-  } = {}) {
-    return new Promise((resolve) => {
-      const overlay = document.getElementById("custom-confirm-overlay");
-      const iconEl = document.getElementById("custom-confirm-icon");
-      const titleEl = document.getElementById("custom-confirm-title");
-      const msgEl = document.getElementById("custom-confirm-msg");
-      const btnCancel = document.getElementById("custom-confirm-cancel");
-      const btnOk = document.getElementById("custom-confirm-ok");
-
-      if (!overlay || !btnCancel || !btnOk) {
-        resolve(window.confirm(message));
-        return;
-      }
-
-      const defaultIcons = {
-        danger: "fa-trash-can",
-        warning: "fa-power-off",
-        info: "fa-cloud-arrow-up"
-      };
-      const faIcon = icon || defaultIcons[type] || "fa-circle-question";
-
-      if (iconEl) {
-        iconEl.className = `custom-confirm-icon ${type}`;
-        iconEl.innerHTML = `<i class="fa-solid ${faIcon}"></i>`;
-      }
-      if (titleEl) titleEl.innerText = title;
-      if (msgEl) msgEl.innerText = message;
-      btnCancel.innerText = cancelText;
-      btnOk.innerText = confirmText;
-      btnOk.className = `custom-confirm-btn confirm ${type}`;
-
-      let settled = false;
-      const cleanup = (result) => {
-        if (settled) return;
-        settled = true;
-        overlay.classList.remove("open");
-        overlay.setAttribute("aria-hidden", "true");
-        btnCancel.removeEventListener("click", onCancel);
-        btnOk.removeEventListener("click", onOk);
-        overlay.removeEventListener("click", onBackdrop);
-        document.removeEventListener("keydown", onKeyDown);
-        resolve(result);
-      };
-
-      const onCancel = () => cleanup(false);
-      const onOk = () => cleanup(true);
-      const onBackdrop = (e) => { if (e.target === overlay) cleanup(false); };
-      const onKeyDown = (e) => {
-        if (e.key === "Escape") cleanup(false);
-        else if (e.key === "Enter") { e.preventDefault(); cleanup(true); }
-      };
-
-      btnCancel.addEventListener("click", onCancel);
-      btnOk.addEventListener("click", onOk);
-      overlay.addEventListener("click", onBackdrop);
-      document.addEventListener("keydown", onKeyDown);
-
-      overlay.classList.add("open");
-      overlay.setAttribute("aria-hidden", "false");
-    });
-  }
-  window.showConfirmModal = showConfirmModal;
-
-  // ── Hàm Toast thông báo ───────────────────────────────────────────────────
-  function showToast(message, type = "info", duration = 3500) {
-    const container = document.getElementById("toast-container");
-    if (!container) return;
-    const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `<span>${message}</span>`;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.opacity = "0";
-      toast.style.transform = "translateX(50px)";
-      toast.style.transition = "all 0.3s ease";
-      setTimeout(() => toast.remove(), 300);
-    }, duration);
-  }
 });
