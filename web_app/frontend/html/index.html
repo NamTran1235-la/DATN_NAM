@@ -17,8 +17,9 @@
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=141">
+  <link rel="stylesheet" href="css/style.css?v=142">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -1199,6 +1200,80 @@
         </div>
       </div>
 
+      <!-- 3.5. Thống Kê Điện Năng PZEM-004T (Biểu đồ & KPI theo Ngày / Tuần / Tháng) -->
+      <div class="drawer-section" id="drawer-pzem-stats-section" style="display: none;">
+        <div class="drawer-sec-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <h4 class="drawer-sec-title">
+            <i class="fa-solid fa-chart-line" style="color: #00b06f;"></i>
+            Thống Kê Điện Năng
+          </h4>
+          <button type="button" class="pzem-stats-refresh-btn" id="btn-pzem-stats-refresh" title="Làm mới dữ liệu thống kê">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+
+        <!-- Bộ lọc khoảng thời gian & chỉ số biểu đồ -->
+        <div class="pzem-stats-toolbar">
+          <div class="pzem-period-tabs" id="pzem-period-tabs">
+            <button type="button" class="pzem-tab-btn active" data-period="day">Hôm nay</button>
+            <button type="button" class="pzem-tab-btn" data-period="week">7 ngày</button>
+            <button type="button" class="pzem-tab-btn" data-period="month">30 ngày</button>
+          </div>
+          <div class="pzem-metric-toggle" id="pzem-metric-toggle">
+            <button type="button" class="pzem-metric-btn active" data-metric="kwh" title="Biểu đồ điện năng (kWh) & tiền điện">kWh</button>
+            <button type="button" class="pzem-metric-btn" data-metric="power" title="Biểu đồ công suất (W)">Watt</button>
+          </div>
+        </div>
+
+        <!-- Vùng vẽ biểu đồ Chart.js -->
+        <div class="pzem-chart-wrap">
+          <canvas id="pzem-stats-chart"></canvas>
+        </div>
+
+        <!-- 4 Ô Tổng Hợp Thống Kê (KPI) -->
+        <div class="pzem-stats-kpi-grid">
+          <div class="pzem-kpi-box kpi-energy">
+            <span class="pzem-kpi-label"><i class="fa-solid fa-bolt"></i> Tiêu thụ kỳ này</span>
+            <strong class="pzem-kpi-val" id="pzem-stat-kwh">0.000 kWh</strong>
+          </div>
+          <div class="pzem-kpi-box kpi-cost">
+            <span class="pzem-kpi-label"><i class="fa-solid fa-coins"></i> Tiền điện kỳ này</span>
+            <strong class="pzem-kpi-val" id="pzem-stat-cost">0 đ</strong>
+          </div>
+          <div class="pzem-kpi-box kpi-peak">
+            <span class="pzem-kpi-label"><i class="fa-solid fa-arrow-trend-up"></i> Công suất đỉnh</span>
+            <strong class="pzem-kpi-val" id="pzem-stat-max-p">0.0 W</strong>
+          </div>
+          <div class="pzem-kpi-box kpi-avg">
+            <span class="pzem-kpi-label"><i class="fa-solid fa-gauge"></i> Công suất TB</span>
+            <strong class="pzem-kpi-val" id="pzem-stat-avg-p">0.0 W</strong>
+          </div>
+        </div>
+
+        <!-- Bảng lịch sử đo gần đây -->
+        <div class="pzem-recent-logs-wrap">
+          <div class="pzem-recent-header">
+            <span><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử đo gần nhất</span>
+            <span class="pzem-sample-badge" id="pzem-stat-samples">0 mẫu</span>
+          </div>
+          <div class="pzem-logs-table-scroll">
+            <table class="pzem-logs-table">
+              <thead>
+                <tr>
+                  <th>Thời gian</th>
+                  <th>U (V)</th>
+                  <th>P (W)</th>
+                  <th>E (kWh)</th>
+                </tr>
+              </thead>
+              <tbody id="pzem-recent-logs-body">
+                <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:10px;">Đang tải dữ liệu...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- 4. Chỉnh Sửa Thiết Bị ("chỉnh thiết bị") -->
       <div class="drawer-section" id="drawer-edit-section">
         <div class="drawer-sec-header">
@@ -2278,7 +2353,7 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="js/app.js?v=141"></script>
+  <script src="js/app.js?v=142"></script>
 </body>
 
 </html>

@@ -57,6 +57,19 @@ class SensorRecord(SQLModel, table=True):
     created_at: datetime = Field(default_factory=get_utc_now, index=True)
 
 
+class PzemRecord(SQLModel, table=True):
+    __tablename__ = "pzem_records"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    voltage: float = Field(default=0.0)      # Điện áp (V)
+    current: float = Field(default=0.0)      # Dòng điện (A)
+    power: float = Field(default=0.0)        # Công suất (W)
+    energy: float = Field(default=0.0)       # Năng lượng tích lũy (kWh)
+    frequency: float = Field(default=50.0)   # Tần số lưới (Hz)
+    pf: float = Field(default=1.0)           # Hệ số công suất
+    created_at: datetime = Field(default_factory=get_utc_now, index=True)
+
+
 class ControlAudit(SQLModel, table=True):
     __tablename__ = "control_audits"
     

@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.config import settings
 from app.database import engine
-from app.models import GatewayStatusLog, SensorRecord
+from app.models import GatewayStatusLog, SensorRecord, PzemRecord
 
 logger = logging.getLogger("MQTT_SERVICE")
 
@@ -86,9 +86,12 @@ from datetime import datetime, timezone
 
 # None until a complete inventory or a zero/single-device heartbeat arrives.
 _ac_inventory_ids = None
+_last_pzem_db_save_ts = 0.0
+_last_pzem_db_power = -1.0
+_last_pzem_db_energy = -1.0
 
 def on_message(client, userdata, msg):
-    global _ac_inventory_ids
+    global _ac_inventory_ids, _last_pzem_db_save_ts, _last_pzem_db_power, _last_pzem_db_energy
     try:
         topic = msg.topic
         payload_str = msg.payload.decode("utf-8")
@@ -314,18 +317,52 @@ def on_message(client, userdata, msg):
 
         # 2. Nhận dữ liệu đo điện PZEM-004T (từ STM32 trung gian)
         elif data.get("type") == "pzem" or ("volt" in data and "power" in data and "node_id" not in data):
+            pzem_v = float(data.get("volt") or data.get("voltage", 0.0))
+            pzem_i = float(data.get("curr") or data.get("current", 0.0))
+            pzem_p = float(data.get("power", 0.0))
+            pzem_e = float(data.get("energy", 0.0))
+            pzem_f = float(data.get("freq") or data.get("frequency", 50.0))
+            pzem_pf = float(data.get("pf", 1.0))
+
             latest_pzem_data.update({
-                "voltage": float(data.get("volt") or data.get("voltage", 0.0)),
-                "current": float(data.get("curr") or data.get("current", 0.0)),
-                "power": float(data.get("power", 0.0)),
-                "energy": float(data.get("energy", 0.0)),
-                "frequency": float(data.get("freq") or data.get("frequency", 50.0)),
-                "pf": float(data.get("pf", 1.0)),
+                "voltage": pzem_v,
+                "current": pzem_i,
+                "power": pzem_p,
+                "energy": pzem_e,
+                "frequency": pzem_f,
+                "pf": pzem_pf,
                 "last_seen": now.isoformat(),
                 "is_online": True
             })
             latest_gateway_status["pzem"] = latest_pzem_data
-            logger.info(f"[PZEM MQTT] U={latest_pzem_data['voltage']}V | I={latest_pzem_data['current']}A | P={latest_pzem_data['power']}W | E={latest_pzem_data['energy']}kWh")
+            logger.info(f"[PZEM MQTT] U={pzem_v}V | I={pzem_i}A | P={pzem_p}W | E={pzem_e}kWh")
+
+            # Lưu lịch sử đo điện vào DB định kỳ (mỗi 30s hoặc khi công suất/điện năng biến động đáng kể)
+            now_ts = now.timestamp()
+            should_save = (
+                (now_ts - _last_pzem_db_save_ts >= 30.0)
+                or (_last_pzem_db_power >= 0 and abs(pzem_p - _last_pzem_db_power) >= 10.0)
+                or (_last_pzem_db_energy >= 0 and abs(pzem_e - _last_pzem_db_energy) >= 0.005)
+            )
+            if should_save:
+                _last_pzem_db_save_ts = now_ts
+                _last_pzem_db_power = pzem_p
+                _last_pzem_db_energy = pzem_e
+                try:
+                    with Session(engine) as session:
+                        p_rec = PzemRecord(
+                            voltage=pzem_v,
+                            current=pzem_i,
+                            power=pzem_p,
+                            energy=pzem_e,
+                            frequency=pzem_f,
+                            pf=pzem_pf,
+                            created_at=now
+                        )
+                        session.add(p_rec)
+                        session.commit()
+                except Exception as db_err:
+                    logger.error(f"Lỗi ghi dữ liệu PZEM vào DB: {db_err}")
 
         # 3. Nhận dữ liệu cảm biến Node ESP-NOW (SHT30 / Radar LD2410)
         elif "node_id" in data or ("val1" in data and "val2" in data):

@@ -2025,6 +2025,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (pzemPanel) pzemPanel.style.display = "none";
     const pzemRateField = document.getElementById("drawer-field-pzem-rate");
     if (pzemRateField) pzemRateField.style.display = "none";
+    const pzemStatsSec = document.getElementById("drawer-pzem-stats-section");
+    if (pzemStatsSec) pzemStatsSec.style.display = "none";
     currentDrawerTarget = null;
     const gwName = localStorage.getItem("gate_custom_name") || "Trạm Gateway ESP32-S3";
     const gwRoom = localStorage.getItem("gate_room") || "Phòng khách";
@@ -2406,7 +2408,186 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
   window.updatePowerSummaryWidget = updatePowerSummaryWidget;
-  window.updatePowerSummaryWidget = updatePowerSummaryWidget;
+
+  // ── THỐNG KÊ ĐIỆN NĂNG PZEM-004T (BIỂU ĐỒ CHART.JS & KPI THEO NGÀY/TUẦN/THÁNG) ──
+  let pzemStatsChart = null;
+  let pzemStatsPeriod = "day";
+  let pzemStatsMetric = "kwh";
+  let pzemStatsCache = null;
+
+  async function loadPzemStats(period = pzemStatsPeriod) {
+    pzemStatsPeriod = period;
+    const refreshBtn = document.getElementById("btn-pzem-stats-refresh");
+    if (refreshBtn) refreshBtn.querySelector("i")?.classList.add("fa-spin");
+
+    try {
+      const res = await callApi(`/api/sensors/pzem/stats?period=${encodeURIComponent(period)}`);
+      if (res && res.success && res.data) {
+        pzemStatsCache = res.data;
+        renderPzemStatsUI(pzemStatsCache);
+      }
+    } catch (err) {
+      console.warn("Không thể tải thống kê PZEM:", err);
+    } finally {
+      if (refreshBtn) {
+        setTimeout(() => refreshBtn.querySelector("i")?.classList.remove("fa-spin"), 300);
+      }
+    }
+  }
+  window.loadPzemStats = loadPzemStats;
+
+  function renderPzemStatsUI(data) {
+    if (!data) return;
+    const summary = data.summary || {};
+    const rate = getElectricityRate();
+
+    const totalKwh = Number(summary.total_kwh || 0);
+    const totalCost = Math.round(totalKwh * rate);
+    const maxPower = Number(summary.max_power || 0);
+    const avgPower = Number(summary.avg_power || 0);
+    const samples = Number(summary.sample_count || 0);
+
+    const kwhEl = document.getElementById("pzem-stat-kwh");
+    const costEl = document.getElementById("pzem-stat-cost");
+    const maxPEl = document.getElementById("pzem-stat-max-p");
+    const avgPEl = document.getElementById("pzem-stat-avg-p");
+    const sampleEl = document.getElementById("pzem-stat-samples");
+
+    if (kwhEl) kwhEl.innerText = `${totalKwh.toFixed(3)} kWh`;
+    if (costEl) costEl.innerText = `${totalCost.toLocaleString("vi-VN")} đ`;
+    if (maxPEl) maxPEl.innerText = `${maxPower.toFixed(1)} W`;
+    if (avgPEl) avgPEl.innerText = `${avgPower.toFixed(1)} W`;
+    if (sampleEl) sampleEl.innerText = `${samples} mẫu`;
+
+    // Render bảng lịch sử đo gần nhất
+    const tbody = document.getElementById("pzem-recent-logs-body");
+    if (tbody) {
+      const logs = Array.isArray(data.recent_logs) ? data.recent_logs : [];
+      if (logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:12px;">Chưa có dữ liệu lịch sử lưu trong CSDL</td></tr>`;
+      } else {
+        tbody.innerHTML = logs.map(item => `
+          <tr>
+            <td>${escapeHtml(item.time || "--")}</td>
+            <td>${Number(item.voltage || 0).toFixed(1)}</td>
+            <td style="font-weight:700;color:#059669;">${Number(item.power || 0).toFixed(1)}</td>
+            <td style="font-weight:700;color:#7e22ce;">${Number(item.energy || 0).toFixed(3)}</td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    // Vẽ biểu đồ Chart.js
+    const canvas = document.getElementById("pzem-stats-chart");
+    if (!canvas || typeof Chart === "undefined") return;
+
+    const labels = data.labels || [];
+    const kwhSeries = data.kwh_series || [];
+    const powerAvgSeries = data.power_avg_series || [];
+    const powerMaxSeries = data.power_max_series || [];
+
+    const isKwhMode = (pzemStatsMetric === "kwh");
+    const datasets = isKwhMode
+      ? [
+          {
+            label: "Điện năng (kWh)",
+            data: kwhSeries,
+            backgroundColor: "rgba(0, 176, 111, 0.78)",
+            hoverBackgroundColor: "#00b06f",
+            borderColor: "#059669",
+            borderWidth: 1,
+            borderRadius: 5,
+            maxBarThickness: 18
+          }
+        ]
+      : [
+          {
+            label: "Công suất TB (W)",
+            data: powerAvgSeries,
+            borderColor: "#f59e0b",
+            backgroundColor: "rgba(245, 158, 11, 0.16)",
+            borderWidth: 2,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 2.5,
+            pointHoverRadius: 5
+          },
+          {
+            label: "Công suất đỉnh (W)",
+            data: powerMaxSeries,
+            borderColor: "#ef4444",
+            backgroundColor: "transparent",
+            borderWidth: 1.5,
+            borderDash: [4, 3],
+            fill: false,
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 4
+          }
+        ];
+
+    if (pzemStatsChart) {
+      pzemStatsChart.destroy();
+      pzemStatsChart = null;
+    }
+
+    pzemStatsChart = new Chart(canvas.getContext("2d"), {
+      type: isKwhMode ? "bar" : "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            display: !isKwhMode,
+            position: "top",
+            labels: { boxWidth: 10, font: { size: 10, weight: "600" }, color: "#475569", padding: 6 }
+          },
+          tooltip: {
+            backgroundColor: "rgba(15, 23, 42, 0.92)",
+            padding: 9,
+            titleFont: { size: 11, weight: "700" },
+            bodyFont: { size: 11 },
+            callbacks: {
+              label: function(ctx) {
+                const val = Number(ctx.parsed.y || 0);
+                if (isKwhMode) {
+                  const costVnd = Math.round(val * getElectricityRate());
+                  return [
+                    `Điện năng: ${val.toFixed(3)} kWh`,
+                    `Tiền điện: ${costVnd.toLocaleString("vi-VN")} đ`
+                  ];
+                }
+                return `${ctx.dataset.label}: ${val.toFixed(1)} W`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: "#64748b",
+              font: { size: 10 },
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: pzemStatsPeriod === "day" ? 8 : 7
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: "rgba(226, 232, 240, 0.7)" },
+            ticks: {
+              color: "#64748b",
+              font: { size: 10 },
+              maxTicksLimit: 5
+            }
+          }
+        }
+      }
+    });
+  }
 
   function openChildDeviceDrawer(devId) {
     let dev = customDevices.find(d => d.id === devId);
@@ -2577,6 +2758,16 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    const pzemStatsSec = document.getElementById("drawer-pzem-stats-section");
+    if (pzemStatsSec) {
+      if (isPzem) {
+        pzemStatsSec.style.display = "block";
+        loadPzemStats(pzemStatsPeriod);
+      } else {
+        pzemStatsSec.style.display = "none";
+      }
+    }
+
     if (btnDrawerDelete) {
       btnDrawerDelete.innerHTML = isIrHub
         ? `<i class="fa-solid fa-trash-can"></i> Xóa Trạm IR Này Khỏi Gateway`
@@ -2599,6 +2790,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (pzemPanel) pzemPanel.style.display = "none";
     const pzemRateField = document.getElementById("drawer-field-pzem-rate");
     if (pzemRateField) pzemRateField.style.display = "none";
+    const pzemStatsSec = document.getElementById("drawer-pzem-stats-section");
+    if (pzemStatsSec) pzemStatsSec.style.display = "none";
     currentDrawerTarget = null;
     currentActiveIrChild = null;
   }
@@ -2963,6 +3156,9 @@ document.addEventListener("DOMContentLoaded", () => {
           renderDevices();
           updatePowerSummaryWidget();
           refreshPzemPanel();
+          if (isPzemDevice(dev) && pzemStatsCache) {
+            renderPzemStatsUI(pzemStatsCache);
+          }
           openChildDeviceDrawer(currentDrawerTarget);
           showToast(`Đã lưu thay đổi cho [${newName}]!${rateNotice}`, "success");
         }
@@ -3884,6 +4080,37 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  // Lắng nghe sự kiện bộ lọc Thống kê Điện năng PZEM (Ngày / Tuần / Tháng & kWh / Watt)
+  document.querySelectorAll(".pzem-tab-btn").forEach(btn => {
+    btn.addEventListener("click", function() {
+      const period = this.getAttribute("data-period") || "day";
+      document.querySelectorAll(".pzem-tab-btn").forEach(b => b.classList.remove("active"));
+      this.classList.add("active");
+      loadPzemStats(period);
+    });
+  });
+
+  document.querySelectorAll(".pzem-metric-btn").forEach(btn => {
+    btn.addEventListener("click", function() {
+      const metric = this.getAttribute("data-metric") || "kwh";
+      pzemStatsMetric = metric;
+      document.querySelectorAll(".pzem-metric-btn").forEach(b => b.classList.remove("active"));
+      this.classList.add("active");
+      if (pzemStatsCache) {
+        renderPzemStatsUI(pzemStatsCache);
+      } else {
+        loadPzemStats(pzemStatsPeriod);
+      }
+    });
+  });
+
+  const btnPzemStatsRefresh = document.getElementById("btn-pzem-stats-refresh");
+  if (btnPzemStatsRefresh) {
+    btnPzemStatsRefresh.addEventListener("click", () => {
+      loadPzemStats(pzemStatsPeriod);
+    });
+  }
 
   // Tap opens devices; hold/right-click opens the existing settings drawer.
   if (devicesGrid) {
