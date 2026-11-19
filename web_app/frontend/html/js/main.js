@@ -285,6 +285,22 @@ document.addEventListener("DOMContentLoaded", () => {
     customDevices.unshift(foundHub);
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
   } else if (foundHub) {
     // Đảm bảo tên hiển thị chuẩn theo giao diện Hunonic: IR trung tâm
     if (!foundHub.name || foundHub.name === "IR Hunonic Smart Pro") {
@@ -296,11 +312,43 @@ document.addEventListener("DOMContentLoaded", () => {
     customDevices = customDevices.filter(d => d.type !== "ac");
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
   } else {
     // Lưu giữ nguyên vẹn mọi thiết bị người dùng đã thêm (Node Cảm Biến C3, v.v.)
     customDevices = customDevices.filter(d => d.type !== "ac");
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
   }
 
   customDevices.forEach(dev => {
@@ -1114,6 +1162,22 @@ document.addEventListener("DOMContentLoaded", () => {
             customDevices = cleanServerDevs;
             localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
             hasChanges = true;
           }
 
@@ -1648,6 +1712,22 @@ document.addEventListener("DOMContentLoaded", () => {
             currentActiveIrChild = null; // Reset thiết bị con đang chọn nếu bị xóa
             localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
             renderIrChildList(hubDev);
             renderDevices();
             if (res.data.children.length === 0) {
@@ -1760,6 +1840,22 @@ document.addEventListener("DOMContentLoaded", () => {
     // Lưu vào localStorage
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
 
     // 2. CẬP NHẬT GIAO DIỆN TỨC THÌ (0ms - phản hồi 60 FPS mượt mà cho người dùng)
     if (targetDev) updateDrawerAcUI(targetDev);
@@ -2199,6 +2295,22 @@ document.addEventListener("DOMContentLoaded", () => {
         customDevices.push(dev);
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
       }
     }
     // Đảm bảo node cảm biến luôn mở được dù chưa có trong danh sách
@@ -2214,6 +2326,22 @@ document.addEventListener("DOMContentLoaded", () => {
       customDevices.push(dev);
       localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
     }
     // Đảm bảo bộ đo điện PZEM luôn mở được dù chưa có trong danh sách
     if (!dev && (devId === "dev_pzem_meter_1" || (typeof devId === "string" && devId.includes("pzem")))) {
@@ -2228,6 +2356,22 @@ document.addEventListener("DOMContentLoaded", () => {
       customDevices.push(dev);
       localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
     }
     if (!dev) return;
     currentDrawerTarget = dev.id;
@@ -2299,6 +2443,22 @@ document.addEventListener("DOMContentLoaded", () => {
           dev.children = res.data.children;
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
           if (currentDrawerTarget === devId && !currentActiveIrChild) {
             renderIrChildList(dev);
             if (drawerHeroSub) {
@@ -2627,6 +2787,22 @@ document.addEventListener("DOMContentLoaded", () => {
           customDevices.unshift(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
           saveUserDevicesToServer(true);
           renderDrawerChildList();
           renderDrawerAvailableDevices();
@@ -2645,6 +2821,22 @@ document.addEventListener("DOMContentLoaded", () => {
           customDevices.push(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
           saveUserDevicesToServer(true);
           renderDrawerChildList();
           renderDrawerAvailableDevices();
@@ -2663,6 +2855,22 @@ document.addEventListener("DOMContentLoaded", () => {
           customDevices.push(newDev);
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
           saveUserDevicesToServer(true);
           renderDrawerChildList();
           renderDrawerAvailableDevices();
@@ -2755,6 +2963,22 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
           saveUserDevicesToServer(true);
           renderDevices();
           updatePowerSummaryWidget();
@@ -2808,6 +3032,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
     foundHub = getActiveIrHub();
     renderDrawerAvailableDevices();
     saveUserDevicesToServer(true);
@@ -2878,6 +3118,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     });
+  }
+
+  function isSensorDevice(dev) {
+    if (!dev) return false;
+    return dev.type === "sensor" || dev.type === "espnow" || dev.id === "dev_espnow_node_1" ||
+      (typeof dev.id === "string" && (dev.id.includes("sensor") || dev.id.includes("espnow"))) ||
+      (typeof dev.name === "string" && dev.name.toLowerCase().includes("cảm biến"));
   }
 
   function getSensorBatteryInfo(dev) {
@@ -3090,6 +3337,22 @@ document.addEventListener("DOMContentLoaded", () => {
               hubDev.children = res.data.children;
               localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
               renderSubViewDevices("ir_hub", hubDev);
               showToast(`Đã đồng bộ ${res.data.children.length} thiết bị!`, "success");
             }
@@ -4584,6 +4847,22 @@ document.addEventListener("DOMContentLoaded", () => {
       customDevices.push(newDev);
       localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
       saveUserDevicesToServer(true);
 
       renderDevices();
@@ -4778,6 +5057,22 @@ document.addEventListener("DOMContentLoaded", () => {
         customDevices.push(newDev);
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
         saveUserDevicesToServer(true);
 
         renderDevices();
@@ -5087,6 +5382,22 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
 
           // Nếu đang xem sub-view của IR Hub -> render lại ngay
           const subViewEl = document.getElementById("view-device-hub");
@@ -6215,6 +6526,22 @@ document.addEventListener("DOMContentLoaded", () => {
           });
           localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
           if (localStorage.getItem("gate_room") === room.name) {
             localStorage.setItem("gate_room", "Phòng khách");
           }
@@ -6265,6 +6592,22 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
 
         renderDevices();
         renderRoomsView();
@@ -6440,6 +6783,22 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
             if (localStorage.getItem("gate_room") === oldName) {
               localStorage.setItem("gate_room", name);
             }
@@ -6475,6 +6834,22 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         localStorage.setItem("gate_custom_devices", JSON.stringify(customDevices));
 
+
+  // ── SHARED APP CONTEXT BRIDGE (Cho các Feature Modules truy cập State) ──
+  window.SmartHome = {
+    pzemData,
+    sensorData,
+    gwMetrics,
+    getCustomDevices: () => customDevices,
+    getCurrentDrawerTarget: () => currentDrawerTarget,
+    getCurrentActiveIrChild: () => currentActiveIrChild,
+    getActivePzem: () => getActivePzem(),
+    isPzemDevice: (dev) => isPzemDevice(dev),
+    isDeviceOnline: (dev) => isDeviceOnline(dev),
+    setCurrentHubView: (v) => { currentHubView = v; },
+    updateSidebarActive: (id) => updateSidebarActive(id),
+    closeHubSubView: (force) => closeHubSubView(force)
+  };
       }
 
       saveStoredRooms(rooms);
