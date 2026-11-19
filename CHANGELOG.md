@@ -157,3 +157,72 @@
 4. **Triển Khai Máy Chủ VPS (`180.93.113.40`):**
    - Đẩy commit lên GitHub (`origin/main`), kéo về VPS và khởi động lại container `gate_datn_frontend` an toàn.
    - Nâng phiên bản cache busting lên `?v=141`.
+
+
+---
+
+### [2026-11-19 (Trưa)] - Thống Kê Điện Năng PZEM, Custom Confirm Modal, Âm Thanh Hiện Diện & Tái Cấu Trúc Frontend Modular
+
+> **Lưu ý quan trọng cho AI / Lập trình viên đọc sau này:**
+> - File đơn khối cũ `web_app/frontend/html/js/app.js` **đã bị xóa** và được thay thế bằng kiến trúc modular (`js/core/*`, `js/features/*`, `js/main.js`).
+> - File `web_app/frontend/html/css/style.css` hiện chỉ còn là **manifest `@import`** (15 dòng); toàn bộ CSS thực tế nằm trong `css/base/`, `css/components/`, `css/pages/`.
+
+#### 1. Hệ Thống Thống Kê Điện Năng PZEM-004T (Backend + Frontend)
+- **Database & Backend (`web_app/backend/app/`):**
+  - `models.py`: Thêm bảng `PzemRecord` (`pzem_records`) lưu `voltage`, `current`, `power`, `energy`, `frequency`, `pf`, `created_at`.
+  - `mqtt_service.py`: Tự động ghi lịch sử `PzemRecord` vào PostgreSQL định kỳ mỗi 30 giây hoặc khi công suất biến động >= 10W / điện năng tăng >= 0.005 kWh.
+  - `routers/sensor_router.py`: Bổ sung 2 API mới:
+    - `GET /api/sensors/pzem/stats?period=day|week|month`: Tổng hợp theo giờ (hôm nay, UTC+7) hoặc theo ngày (7 ngày / 30 ngày), trả về series kWh, công suất TB/đỉnh, KPI summary và 8 bản ghi gần nhất.
+    - `GET /api/sensors/pzem/history`: Truy vấn danh sách bản ghi đo điện thô.
+- **Frontend (`js/features/pzem.js`, `css/components/widgets.css`, `index.html`):**
+  - Tích hợp Chart.js v4.4.3 ngay trong Right Drawer của thiết bị **Đo Điện Năng** (`#drawer-pzem-stats-section`).
+  - Bộ lọc **Hôm nay / 7 ngày / 30 ngày**, chuyển đổi chế độ **kWh (biểu đồ cột + tooltip tiền điện)** và **Watt (biểu đồ đường TB & đỉnh)**, 4 ô KPI summary, và bảng lịch sử đo gần nhất.
+
+#### 2. Custom Confirm Modal & Tinh Chỉnh Giao Diện UI/UX
+- **Thay thế toàn bộ 14 hộp thoại `window.confirm()` mặc định** bằng `showConfirmModal({ title, message, confirmText, cancelText, type })` (`danger` / `warning` / `info`) có nền mờ kính, bo góc 24px, hỗ trợ phím `Esc`/`Enter`.
+- **Sửa lỗi layout bị co hẹp & dính sát:**
+  - `.view-automations`, `.view-notifications`, `.hunonic-subview`: Thêm `width: 100%; box-sizing: border-box;` để không bị flexbox co chiều rộng; tăng padding & gap cho `.subview-header-bar`.
+  - Nới rộng các modal thiết lập (`scene-builder-card` & `automation-builder-card` lên `680px`, `room-builder-card` lên `640px`), cố định chiều cao nút icon `48px`, thanh cuộn mảnh `6px`.
+  - Sửa `.color-picker-row` & `.color-dot.active` (`scale(1.12)`, thêm `padding: 8px 6px`) để không đè lên nhãn `"Tông màu hiển thị"`.
+  - Thêm `margin-bottom: 28px` cho `.top-widgets-row` và `margin-bottom: 26px` cho `.section-block` để tách phần **Ngữ cảnh hay dùng (`+ Thêm`)** khỏi hàng widget phía trên.
+
+#### 3. Âm Thanh Chuông Báo Khi Phát Hiện Có Người (`js/core/audio.js`)
+- Dùng Web Audio API tổng hợp chuỗi chuông 3 nốt (`C6 -> E6 -> G6`) không cần file MP3 ngoài, tự động mở khóa `AudioContext` ở lần tương tác đầu tiên.
+- Gọi `playPresenceAlertSound()` khi Radar LD2410B chuyển trạng thái sang có người (kèm Toast & thông báo hệ thống).
+- Bổ sung nút bật/tắt loa `#btn-toggle-presence-sound` trên thanh Topbar (lưu `localStorage.gate_presence_sound`, mặc định BẬT).
+
+#### 4. Kiến Trúc Frontend Modular Chuẩn (`web_app/frontend/html/`)
+```text
+web_app/frontend/html/
+├── index.html                   (Load song song 10 file CSS & 7 file JS, cache ?v=150)
+├── css/
+│   ├── style.css                (Entry manifest @import)
+│   ├── base/
+│   │   ├── layout.css           (Design tokens, resets, sidebar, topbar, main shell)
+│   │   └── responsive.css       (Breakpoints Tablet & Mobile: 1024px, 768px, 480px)
+│   ├── components/
+│   │   ├── widgets.css          (Weather, Power Card, PZEM Stats, Status Counters)
+│   │   ├── cards.css            (Device cards, Subview cards, Card themes)
+│   │   ├── drawer.css           (Right Drawer, Drawer AC panel, Left AC Settings Drawer)
+│   │   └── modals.css           (HVAC, BLE, Custom Confirm Modal, Toast)
+│   └── pages/
+│       ├── automations.css      (Smart Automations & Scenes Builder)
+│       ├── notifications.css    (Notification Center)
+│       ├── rooms.css            (Room Management & Dashboard Filter Chips)
+│       └── ota.css              (OTA Firmware Manager)
+└── js/
+    ├── core/
+    │   ├── api.js               (getAuthToken, callApi JWT client)
+    │   ├── ui-feedback.js       (showToast, showConfirmModal)
+    │   ├── utils.js             (escapeHtml, formatUptime, formatTimeAgo, SVG icons)
+    │   └── audio.js             (Web Audio presence chime & topbar mute toggle)
+    ├── features/
+    │   ├── pzem.js              (PZEM tariff/cost, realtime panel, Chart.js stats, banner)
+    │   └── notifications.js     (Notification Center, filters, unread badge)
+    ├── main.js                  (Core orchestrator + window.SmartHome shared state bridge)
+    └── login.js                 (Trang đăng nhập)
+```
+
+#### 5. Trạng Thái Triển Khai VPS (`180.93.113.40`)
+- Đã push lên nhánh `main` (commit `93eb6a4`), pull về `/root/DATN_NAM` và restart an toàn `gate_datn_backend` & `gate_datn_frontend`.
+- Đã xác nhận `200 OK` cho toàn bộ 17/17 file CSS/JS modular và xác nhận OpenAPI có đủ `/api/sensors/pzem/latest`, `/api/sensors/pzem/history`, `/api/sensors/pzem/stats`.
