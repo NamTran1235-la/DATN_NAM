@@ -6512,13 +6512,13 @@ body {
 .icon-picker-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 
 .icon-picker-btn {
-  aspect-ratio: 1;
+  height: 48px;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
   color: #475569;
   font-size: 1.15rem;
@@ -6527,6 +6527,34 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.scene-builder-card .modal-body,
+.automation-builder-card .modal-body,
+.room-builder-card .modal-body {
+  padding: 24px 28px !important;
+  max-height: 82vh !important;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.scene-builder-card .modal-body::-webkit-scrollbar,
+.automation-builder-card .modal-body::-webkit-scrollbar,
+.room-builder-card .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scene-builder-card .modal-body::-webkit-scrollbar-thumb,
+.automation-builder-card .modal-body::-webkit-scrollbar-thumb,
+.room-builder-card .modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.scene-builder-card .modal-header,
+.automation-builder-card .modal-header,
+.room-builder-card .modal-header {
+  padding: 20px 28px;
 }
 
 .icon-picker-btn:hover {
