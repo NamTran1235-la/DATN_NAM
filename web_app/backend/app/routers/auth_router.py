@@ -50,21 +50,32 @@ def login(req: UserLoginRequest, session: Session = Depends(get_session)):
     "/register",
     response_model=UserResponse,
     summary="Đăng ký tài khoản người dùng mới",
-    description="Tạo tài khoản mới. Nếu chưa có tài khoản nào, user đầu tiên sẽ là admin."
+    description="Tạo tài khoản mới (mặc định quyền operator; chỉ tài khoản đầu tiên khi hệ thống trống mới nhận quyền admin)."
 )
 def register(req: UserRegisterRequest, session: Session = Depends(get_session)):
-    existing = session.exec(select(User).where(User.username == req.username)).first()
+    username = req.username.strip()
+    if len(username) < 3 or len(req.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tên đăng nhập phải từ 3 ký tự và mật khẩu tối thiểu 6 ký tự!"
+        )
+
+    existing = session.exec(select(User).where(User.username == username)).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Tên tài khoản '{req.username}' đã tồn tại trong hệ thống!"
+            detail=f"Tên tài khoản '{username}' đã tồn tại trong hệ thống!"
         )
 
+    # Bảo mật: Không cho phép tự nâng quyền admin qua API đăng ký công khai
+    any_user = session.exec(select(User)).first()
+    assigned_role = "admin" if any_user is None else "operator"
+
     new_user = User(
-        username=req.username,
+        username=username,
         password_hash=hash_password(req.password),
-        fullname=req.fullname or req.username,
-        role=req.role or "operator",
+        fullname=req.fullname or username,
+        role=assigned_role,
         is_active=True
     )
     session.add(new_user)

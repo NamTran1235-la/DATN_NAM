@@ -10,7 +10,7 @@ from sqlmodel import Session, select, desc
 from typing import List
 
 from app.database import get_session
-from app.auth import get_current_user
+from app.auth import get_current_user, require_admin
 from app.models import (
     RelayControlRequest,
     NodeCommandRequest,
@@ -164,7 +164,7 @@ def control_relay_path(
     description="Gửi lệnh reboot vi điều khiển ESP32-S3."
 )
 def reboot_gateway(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
     session: Session = Depends(get_session)
 ):
     cmd = {"cmd": "reboot"}
@@ -315,16 +315,19 @@ def get_discovered_devices(current_user: dict = Depends(get_current_user)):
 # QUẢN LÝ & CẬP NHẬT FIRMWARE TỪ XA QUA CLOUD (FIRMWARE OTA ENGINE - CHUẨN PUMP)
 # ==============================================================================
 
-@router.post("/ota/upload", summary="Tải lên file firmware (.bin)")
+@router.post("/ota/upload", summary="Tải lên file firmware (.bin) (Chỉ Admin)")
 async def upload_firmware(
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_admin)
 ):
-    if not file.filename.endswith(".bin"):
+    if not file.filename or not file.filename.endswith(".bin"):
         raise HTTPException(status_code=400, detail="Chỉ chấp nhận file định dạng firmware (.bin)!")
 
-    # Đặt tên file an toàn
-    safe_filename = os.path.basename(file.filename)
+    # Đặt tên file an toàn tuyệt đối (chống Path Traversal)
+    raw_name = os.path.basename(file.filename)
+    safe_filename = re.sub(r"[^a-zA-Z0-9._-]", "_", raw_name)
+    if not safe_filename.endswith(".bin"):
+        safe_filename += ".bin"
     file_path = os.path.join(FIRMWARE_DIR, safe_filename)
 
     content = await file.read()
@@ -332,6 +335,8 @@ async def upload_firmware(
 
     if file_size == 0:
         raise HTTPException(status_code=400, detail="File firmware rỗng (0 bytes)!")
+    if file_size > 16 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Dung lượng file firmware vượt quá giới hạn 16 MB!")
 
     # Tính MD5 checksum
     md5_hash = hashlib.md5(content).hexdigest()
@@ -365,10 +370,10 @@ def list_firmwares(current_user: dict = Depends(get_current_user)):
     files.sort(key=lambda x: x["modified_at"], reverse=True)
     return files
 
-@router.post("/ota/trigger", summary="Bắn lệnh OTA qua MQTT tới ESP32")
+@router.post("/ota/trigger", summary="Bắn lệnh OTA qua MQTT tới ESP32 (Chỉ Admin)")
 def trigger_ota(
     payload: OTATriggerRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
     session: Session = Depends(get_session)
 ):
     topic = "gate/ota"

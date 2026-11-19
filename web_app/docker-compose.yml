@@ -5,11 +5,11 @@ services:
     container_name: gate_datn_postgres
     restart: always
     environment:
-      POSTGRES_USER: gate_admin
-      POSTGRES_PASSWORD: GatePass2026
-      POSTGRES_DB: gate_datn_db
+      POSTGRES_USER: ${POSTGRES_USER:-gate_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-GatePass2026}
+      POSTGRES_DB: ${POSTGRES_DB:-gate_datn_db}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - gate_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -29,13 +29,13 @@ services:
       - "8001:8001"
     environment:
       PORT: 8001
-      DATABASE_URL: "postgresql+psycopg2://gate_admin:GatePass2026@gate_postgres:5432/gate_datn_db"
-      JWT_SECRET: "gate_datn_super_secret_jwt_key_ictu_2026"
+      DATABASE_URL: "${DATABASE_URL:-postgresql+psycopg2://gate_admin:GatePass2026@gate_postgres:5432/gate_datn_db}"
+      JWT_SECRET: "${JWT_SECRET:-gate_datn_super_secret_jwt_key_ictu_2026}"
       MQTT_BROKER_URI: "${MQTT_BROKER_URI:-mqtts://your-cluster.s1.eu.hivemq.cloud:8883}"
       MQTT_USERNAME: "${MQTT_USERNAME:-your_mqtt_username}"
       MQTT_PASSWORD: "${MQTT_PASSWORD:-your_mqtt_password}"
-      DEFAULT_ADMIN_USER: "admin"
-      DEFAULT_ADMIN_PASS: "admin123"
+      DEFAULT_ADMIN_USER: "${DEFAULT_ADMIN_USER:-admin}"
+      DEFAULT_ADMIN_PASS: "${DEFAULT_ADMIN_PASS:-admin123}"
     volumes:
       - ./backend/app:/app/app
       - ./firmware_storage:/app/firmware_storage

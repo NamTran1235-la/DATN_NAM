@@ -46,7 +46,7 @@ Trường Đại học Công nghệ Thông tin & Truyền thông - Đại học 
 ---
 
 ### Hướng Dẫn Xác Thực Gọi API:
-- Bước 1: Gọi `POST /api/auth/login` với tài khoản mặc định `admin` / `admin123`.
+- Bước 1: Gọi `POST /api/auth/login` với tài khoản quản trị được cấp.
 - Bước 2: Bấm nút **Authorize (Khóa xanh)** ở góc trên bên phải trang Swagger này, dán Access Token nhận được vào ô input.
 - Bước 3: Thử nghiệm trực tiếp các endpoint điều khiển thiết bị!
 """

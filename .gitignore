@@ -23,6 +23,11 @@ secrets.h
 *.db
 *.sqlite
 *.sqlite3
+*.pem
+*.key
+web_app/frontend/ssl/
+**/__pycache__/
+*.pyc
 
 # Local Changelogs & Internal Notes (ignore from Git to prevent credential leaks)
 CHANGELOG.md
