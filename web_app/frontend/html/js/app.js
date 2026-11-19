@@ -3107,7 +3107,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Nút "Reboot Trạm" trong drawer
   if (btnDrawerReboot) {
     btnDrawerReboot.addEventListener("click", async () => {
-      if (confirm("Bạn có chắc chắn muốn khởi động lại Trạm Gateway ESP32-S3?")) {
+      const ok = await showConfirmModal({
+        title: "Khởi động lại Gateway?",
+        message: "Bạn có chắc chắn muốn khởi động lại Trạm Gateway ESP32-S3?",
+        confirmText: "Khởi động lại",
+        type: "warning"
+      });
+      if (ok) {
         showToast("Đang gửi lệnh khởi động lại Gateway...", "info");
         const res = await callApi("/api/gateway/reboot", "POST");
         if (res && res.success) {
@@ -3211,10 +3217,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Nút "Xóa Thiết Bị Này" ("có xóa thiết bị")
   if (btnDrawerDelete) {
-    btnDrawerDelete.addEventListener("click", () => {
+    btnDrawerDelete.addEventListener("click", async () => {
       if (currentDrawerTarget === null) {
         // Xóa Trạm Gateway
-        if (confirm("Bạn có chắc chắn muốn xóa Trạm Gateway ESP32-S3 khỏi phòng khách này?")) {
+        const ok = await showConfirmModal({
+          title: "Xóa Trạm Gateway?",
+          message: "Bạn có chắc chắn muốn xóa Trạm Gateway ESP32-S3 khỏi phòng khách này?",
+          confirmText: "Xóa thiết bị",
+          type: "danger"
+        });
+        if (ok) {
           isGateAddedToRoom = false;
           localStorage.setItem("gate_added_to_room", "false");
           closeRightDrawer();
@@ -3226,7 +3238,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Xóa thiết bị con
         const dev = customDevices.find(d => d.id === currentDrawerTarget);
         const devName = dev ? dev.name : "thiết bị";
-        if (confirm(`Bạn có chắc chắn muốn xóa [${devName}] khỏi Gateway?`)) {
+        const ok = await showConfirmModal({
+          title: "Xác nhận xóa thiết bị",
+          message: `Bạn có chắc chắn muốn xóa [${devName}] khỏi Gateway?`,
+          confirmText: "Xóa ngay",
+          type: "danger"
+        });
+        if (ok) {
           const targetId = currentDrawerTarget;
           removeDeviceFromGateway(targetId);
           closeRightDrawer();
@@ -3240,14 +3258,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Xóa trực tiếp trong danh sách con của drawer
   if (drawerChildList) {
-    drawerChildList.addEventListener("click", (e) => {
+    drawerChildList.addEventListener("click", async (e) => {
       const btnRemove = e.target.closest(".btn-remove-child-dev");
       if (btnRemove) {
         e.stopPropagation();
         const devId = btnRemove.getAttribute("data-id");
         const dev = customDevices.find(d => d.id === devId);
         const devName = dev ? dev.name : "thiết bị";
-        if (confirm(`Bạn có chắc muốn xóa [${devName}] khỏi Gateway?`)) {
+        const ok = await showConfirmModal({
+          title: "Xác nhận xóa thiết bị",
+          message: `Bạn có chắc chắn muốn xóa [${devName}] khỏi Gateway?`,
+          confirmText: "Xóa ngay",
+          type: "danger"
+        });
+        if (ok) {
           removeDeviceFromGateway(devId);
           renderDrawerChildList();
           renderDevices();
@@ -4510,7 +4534,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnRebootGate) {
     btnRebootGate.addEventListener("click", async () => {
-      if (confirm("Bạn có chắc chắn muốn khởi động lại Trạm Gateway ESP32-S3 không?")) {
+      const ok = await showConfirmModal({
+        title: "Khởi động lại Gateway?",
+        message: "Bạn có chắc chắn muốn khởi động lại Trạm Gateway ESP32-S3 không?",
+        confirmText: "Khởi động lại",
+        type: "warning"
+      });
+      if (ok) {
         const res = await callApi("/api/gateway/reboot", "POST");
         if (res && res.success) showToast(res.message, "success");
       }
@@ -4574,11 +4604,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     container.querySelectorAll(".btn-scene-del").forEach(btn => {
-      btn.addEventListener("click", (e) => {
+      btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const sId = btn.getAttribute("data-id");
         const sName = btn.getAttribute("data-name") || "ngữ cảnh này";
-        if (confirm(`Bạn có chắc chắn muốn xóa ngữ cảnh "${sName}" không?`)) {
+        const ok = await showConfirmModal({
+          title: "Xóa ngữ cảnh?",
+          message: `Bạn có chắc chắn muốn xóa ngữ cảnh "${sName}" không?`,
+          confirmText: "Xóa ngay",
+          type: "danger"
+        });
+        if (ok) {
           const filtered = getStoredScenes().filter(s => s.id !== sId);
           saveStoredScenes(filtered);
           renderFavoriteScenes();
@@ -5380,12 +5416,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Xử lý nút xóa thiết bị tùy chỉnh
     container.querySelectorAll(".btn-remove-linked-dev").forEach(btn => {
-      btn.addEventListener("click", (e) => {
+      btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const devId = btn.getAttribute("data-id");
         const dev = customDevices.find(d => d.id === devId);
         const devName = dev ? dev.name : "thiết bị";
-        if (confirm(`Bạn có chắc chắn muốn xóa [${devName}] khỏi Gateway?`)) {
+        const ok = await showConfirmModal({
+          title: "Xác nhận xóa thiết bị",
+          message: `Bạn có chắc chắn muốn xóa [${devName}] khỏi Gateway?`,
+          confirmText: "Xóa ngay",
+          type: "danger"
+        });
+        if (ok) {
           removeDeviceFromGateway(devId);
           renderLinkedDevicesList();
           renderDrawerChildList();
@@ -5407,7 +5449,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Nút reboot Gateway
   if (btnGwReboot) {
     btnGwReboot.addEventListener("click", async () => {
-      if (confirm("Bạn có chắc chắn muốn khởi động lại Trạm Gateway ESP32-S3?")) {
+      const ok = await showConfirmModal({
+        title: "Khởi động lại Gateway?",
+        message: "Bạn có chắc chắn muốn khởi động lại Trạm Gateway ESP32-S3?",
+        confirmText: "Khởi động lại",
+        type: "warning"
+      });
+      if (ok) {
         showToast("Đang gửi lệnh khởi động lại Gateway...", "info");
         const res = await callApi("/api/gateway/reboot", "POST");
         if (res && res.success) {
@@ -6289,9 +6337,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     listEl.querySelectorAll(".btn-auto-del").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         const id = btn.getAttribute("data-id");
-        if (confirm("Bạn có chắc chắn muốn xóa kịch bản này?")) {
+        const ok = await showConfirmModal({
+          title: "Xóa kịch bản tự động?",
+          message: "Bạn có chắc chắn muốn xóa kịch bản này?",
+          confirmText: "Xóa ngay",
+          type: "danger"
+        });
+        if (ok) {
           const filtered = getStoredAutomations().filter(a => a.id !== id);
           saveStoredAutomations(filtered);
           renderAutomations();
@@ -6770,8 +6824,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (btnClearAllNotifs) {
-    btnClearAllNotifs.addEventListener("click", () => {
-      if (!confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử thông báo?")) return;
+    btnClearAllNotifs.addEventListener("click", async () => {
+      const ok = await showConfirmModal({
+        title: "Xóa lịch sử thông báo?",
+        message: "Bạn có chắc chắn muốn xóa toàn bộ lịch sử thông báo?",
+        confirmText: "Xóa tất cả",
+        type: "danger"
+      });
+      if (!ok) return;
       saveStoredNotifications([]);
       renderNotificationsList();
       showToast("Đã xóa toàn bộ thông báo!", "info");
@@ -6987,13 +7047,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     roomsGridContainer.querySelectorAll(".btn-del-room").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         const id = btn.getAttribute("data-id");
         const rooms = getStoredRooms();
         const room = rooms.find(r => r.id === id);
         if (!room) return;
 
-        if (confirm(`Bạn có chắc chắn muốn xóa phòng "${room.name}"? Các thiết bị trong phòng sẽ được chuyển về "Phòng khách".`)) {
+        const ok = await showConfirmModal({
+          title: `Xóa phòng "${room.name}"?`,
+          message: `Các thiết bị trong phòng "${room.name}" sẽ được tự động chuyển về "Phòng khách".`,
+          confirmText: "Xóa phòng",
+          type: "danger"
+        });
+        if (ok) {
           customDevices.forEach(d => {
             if (d.room === room.name) d.room = "Phòng khách";
           });
@@ -7658,7 +7724,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const version = (otaFileVersionInput && otaFileVersionInput.value.trim()) || "1.0.1";
     const targetLabel = currentOtaTarget === "esp32s3_gate" ? "Trạm Gateway ESP32-S3" : "Node Cảm Biến C3";
 
-    if (!confirm(`Xác nhận nạp firmware ${selectedOtaFile.name} (v${version}) cho ${targetLabel}?`)) {
+    const okUpload = await showConfirmModal({
+      title: "Xác nhận nạp Firmware OTA",
+      message: `Nạp firmware ${selectedOtaFile.name} (v${version}) cho ${targetLabel}?`,
+      confirmText: "Bắt đầu nạp",
+      type: "info"
+    });
+    if (!okUpload) {
       return;
     }
 
@@ -7754,7 +7826,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (!confirm(`Kích hoạt OTA từ xa cho ${targetLabel}?\nURL: ${url}`)) {
+    const okUrl = await showConfirmModal({
+      title: "Kích hoạt OTA từ xa",
+      message: `Nạp firmware từ xa cho ${targetLabel}?\nURL: ${url}`,
+      confirmText: "Kích hoạt OTA",
+      type: "info"
+    });
+    if (!okUrl) {
       return;
     }
 
@@ -7992,7 +8070,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnOtaReboot) {
     btnOtaReboot.addEventListener("click", async () => {
-      if (!confirm("Bạn có chắc chắn muốn khởi động lại Trạm Gateway ESP32-S3 từ xa?")) return;
+      const ok = await showConfirmModal({
+        title: "Khởi động lại Gateway từ xa?",
+        message: "Bạn có chắc chắn muốn khởi động lại Trạm Gateway ESP32-S3 từ xa?",
+        confirmText: "Khởi động lại",
+        type: "warning"
+      });
+      if (!ok) return;
       appendOtaLog("Đang gửi lệnh Reboot xuống Gateway...", "warn");
       const res = await callApi("/api/gateway/reboot", "POST");
       if (res && res.success) {
@@ -8619,6 +8703,77 @@ document.addEventListener("DOMContentLoaded", () => {
   updateAcModalUI();
   fetchStatus();
   setInterval(fetchStatus, 2500);
+
+  // ── Hộp thoại Xác nhận (Custom Confirm Modal thay thế window.confirm) ───────
+  function showConfirmModal({
+    title = "Xác nhận thao tác",
+    message = "Bạn có chắc chắn muốn thực hiện hành động này?",
+    confirmText = "Xác nhận",
+    cancelText = "Hủy bỏ",
+    type = "danger",
+    icon = null
+  } = {}) {
+    return new Promise((resolve) => {
+      const overlay = document.getElementById("custom-confirm-overlay");
+      const iconEl = document.getElementById("custom-confirm-icon");
+      const titleEl = document.getElementById("custom-confirm-title");
+      const msgEl = document.getElementById("custom-confirm-msg");
+      const btnCancel = document.getElementById("custom-confirm-cancel");
+      const btnOk = document.getElementById("custom-confirm-ok");
+
+      if (!overlay || !btnCancel || !btnOk) {
+        resolve(window.confirm(message));
+        return;
+      }
+
+      const defaultIcons = {
+        danger: "fa-trash-can",
+        warning: "fa-power-off",
+        info: "fa-cloud-arrow-up"
+      };
+      const faIcon = icon || defaultIcons[type] || "fa-circle-question";
+
+      if (iconEl) {
+        iconEl.className = `custom-confirm-icon ${type}`;
+        iconEl.innerHTML = `<i class="fa-solid ${faIcon}"></i>`;
+      }
+      if (titleEl) titleEl.innerText = title;
+      if (msgEl) msgEl.innerText = message;
+      btnCancel.innerText = cancelText;
+      btnOk.innerText = confirmText;
+      btnOk.className = `custom-confirm-btn confirm ${type}`;
+
+      let settled = false;
+      const cleanup = (result) => {
+        if (settled) return;
+        settled = true;
+        overlay.classList.remove("open");
+        overlay.setAttribute("aria-hidden", "true");
+        btnCancel.removeEventListener("click", onCancel);
+        btnOk.removeEventListener("click", onOk);
+        overlay.removeEventListener("click", onBackdrop);
+        document.removeEventListener("keydown", onKeyDown);
+        resolve(result);
+      };
+
+      const onCancel = () => cleanup(false);
+      const onOk = () => cleanup(true);
+      const onBackdrop = (e) => { if (e.target === overlay) cleanup(false); };
+      const onKeyDown = (e) => {
+        if (e.key === "Escape") cleanup(false);
+        else if (e.key === "Enter") { e.preventDefault(); cleanup(true); }
+      };
+
+      btnCancel.addEventListener("click", onCancel);
+      btnOk.addEventListener("click", onOk);
+      overlay.addEventListener("click", onBackdrop);
+      document.addEventListener("keydown", onKeyDown);
+
+      overlay.classList.add("open");
+      overlay.setAttribute("aria-hidden", "false");
+    });
+  }
+  window.showConfirmModal = showConfirmModal;
 
   // ── Hàm Toast thông báo ───────────────────────────────────────────────────
   function showToast(message, type = "info", duration = 3500) {

@@ -17,7 +17,7 @@
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=142">
+  <link rel="stylesheet" href="css/style.css?v=143">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
@@ -2350,10 +2350,25 @@
     </div>
   </aside>
 
+  <!-- Custom Confirm Modal (Thay thế hoàn toàn popup confirm mặc định của trình duyệt) -->
+  <div id="custom-confirm-overlay" class="custom-confirm-overlay" aria-hidden="true">
+    <div class="custom-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="custom-confirm-title">
+      <div class="custom-confirm-icon danger" id="custom-confirm-icon">
+        <i class="fa-solid fa-trash-can"></i>
+      </div>
+      <h3 class="custom-confirm-title" id="custom-confirm-title">Xác nhận thao tác</h3>
+      <p class="custom-confirm-msg" id="custom-confirm-msg">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+      <div class="custom-confirm-actions">
+        <button type="button" class="custom-confirm-btn cancel" id="custom-confirm-cancel">Hủy bỏ</button>
+        <button type="button" class="custom-confirm-btn confirm danger" id="custom-confirm-ok">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="js/app.js?v=142"></script>
+  <script src="js/app.js?v=143"></script>
 </body>
 
 </html>
