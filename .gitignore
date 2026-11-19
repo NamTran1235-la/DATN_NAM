@@ -23,3 +23,7 @@ secrets.h
 *.db
 *.sqlite
 *.sqlite3
+
+# Local Changelogs & Internal Notes (ignore from Git to prevent credential leaks)
+CHANGELOG.md
+Document/nhat_ky_phat_trien_pzem.md
