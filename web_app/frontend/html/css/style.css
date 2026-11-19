@@ -6571,22 +6571,24 @@ body {
 
 .color-picker-row {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
+  padding: 8px 6px;
+  margin-top: 4px;
 }
 
 .color-dot {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   cursor: pointer;
-  transition: transform 0.2s;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
 }
 
 .color-dot.active {
-  transform: scale(1.25);
-  box-shadow: 0 0 0 3px #ffffff, 0 0 0 5px #00b06f;
+  transform: scale(1.12);
+  box-shadow: 0 0 0 2.5px #ffffff, 0 0 0 4.5px #00b06f;
 }
 
 /* Micro Step Buttons (+/-) */
